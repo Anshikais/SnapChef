@@ -17,10 +17,10 @@ SnapChef is a smart recipe and food discovery application that helps users explo
 
 ## Technologies Used 💻
 
-- HTML
-- CSS
+- HTML5
+- Tailwind CSS
 - JavaScript
-- React.js
+- React
 - API Integration
 
 ---
