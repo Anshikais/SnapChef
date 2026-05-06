@@ -36,4 +36,4 @@ The purpose of SnapChef is to make cooking easier by helping users discover reci
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/snapchef.git
+git clone https://github.com/Anshikais/snapchef.git
