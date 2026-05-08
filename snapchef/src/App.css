@@ -1,0 +1,265 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #f7f9fc;
+  color: #333;
+}
+
+/* Navbar */
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #ff6b6b !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  background-color: white !important;
+}
+
+/* Main Container */
+.main-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Upload Section */
+.upload-card {
+  border: 2px dashed #cbd5e1;
+  border-radius: 1rem;
+  background-color: white;
+  padding: 3rem 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.recipe-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.upload-card:hover {
+  border-color: #ff6b6b;
+  background-color: #fff5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.preview-container {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: relative;
+  max-height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #1e293b;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+/* Ingredients */
+.custom-badge {
+  background-color: #fff0f0;
+  color: #e53e3e;
+  border: 1px solid #fed7d7;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.custom-badge:hover {
+  background-color: #fed7d7;
+  transform: scale(1.05);
+}
+
+/* Recipe Cards */
+.recipe-card {
+  border: none;
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  height: 100%;
+}
+
+.recipe-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transition: 0.3s ease;
+}
+
+.card-img-top {
+  height: 200px;
+  object-fit: cover;
+}
+
+.rating-badge {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #d97706;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Primary Button */
+.btn-primary-custom {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+  border: none;
+  border-radius: 2rem;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(255, 107, 107, 0.3);
+}
+
+.btn-primary-custom:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 107, 107, 0.4);
+  color: white;
+}
+
+.btn-primary-custom:disabled {
+  background: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* --- Smooth Transitions for Theme --- */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.navbar, .upload-card, .recipe-card, .custom-badge, .btn, .alert {
+  transition: all 0.3s ease;
+}
+
+/* --- Dark Mode Styles --- */
+body.dark-mode {
+  background-color: #0d0d0d;
+  color: #ffffff;
+}
+
+body.dark-mode .text-secondary {
+  color: #aaaaaa !important;
+}
+
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+  color: #ffffff;
+}
+
+/* Navbar */
+.navbar-dark-custom {
+  background-color: #111111 !important;
+}
+
+body.dark-mode .navbar-text-custom {
+  color: #aaaaaa !important;
+}
+
+body.dark-mode .nav-link {
+  color: #dddddd !important;
+}
+
+body.dark-mode .nav-link:hover {
+  color: #ffffff !important;
+}
+
+body.dark-mode .navbar {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+/* Cards */
+body.dark-mode .upload-card,
+body.dark-mode .recipe-card,
+body.dark-mode .card {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border-color: #333333;
+}
+
+body.dark-mode .recipe-card .card-body,
+body.dark-mode .recipe-card .card-title,
+body.dark-mode .recipe-card .card-text {
+  color: #ffffff;
+}
+
+body.dark-mode .upload-card:hover {
+  background-color: #1f1f1f;
+  border-color: #ff6b6b;
+}
+
+body.dark-mode .recipe-card:hover {
+  background-color: #242424;
+}
+
+/* Buttons */
+body.dark-mode .btn-outline-secondary {
+  color: #aaaaaa;
+  border-color: #333333;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+  background-color: #333333;
+  color: #ffffff;
+}
+
+/* Input/Badge backgrounds */
+body.dark-mode .custom-badge {
+  background-color: #2a2a2a;
+  color: #ffffff;
+  border: 1px solid #333333;
+}
+
+body.dark-mode .custom-badge:hover {
+  background-color: #0d0d0d;
+  border-color: #ff6b6b;
+}
+
+body.dark-mode .rating-badge {
+  background-color: rgba(26, 26, 26, 0.9);
+  color: #fbbf24;
+}
+
+/* Error Alerts */
+body.dark-mode .alert-danger {
+  background-color: #2a1a1a;
+  color: #ff8e8e;
+  border: 1px solid #4a2a2a;
+}
+
