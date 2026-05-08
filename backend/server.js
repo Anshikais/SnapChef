@@ -239,7 +239,7 @@ app.post('/api/ai/dish', async (req, res) => {
       return res.status(400).json({ error: 'Dish name is required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const prompt = `You are an expert chef and culinary assistant. The user wants to make a specific dish but needs help with ingredients and method. The dish name is: ${dishName}.
 
 Respond with:
