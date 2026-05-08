@@ -53,7 +53,7 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
     const mimeType = req.file.mimetype;
 
     // Use Gemini Vision to detect ingredients
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
    const prompt = `You are a food ingredient detector. 
 Look at this image carefully.
 If you see any food items, ingredients, vegetables, fruits, meat, dairy, or grocery items, list them all.
@@ -196,7 +196,7 @@ app.post('/api/ai/diet', async (req, res) => {
       return res.status(400).json({ error: 'Diet type is required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const prompt = `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
 Suggest 3-5 recipes that match their diet goal.
 
