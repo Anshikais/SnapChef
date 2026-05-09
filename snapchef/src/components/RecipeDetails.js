@@ -13,6 +13,7 @@ export default function RecipeDetails() {
     const fetchRecipe = async () => {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_URL}/recipes/${id}`);
+        console.log('RECIPE DATA:', JSON.stringify(response.data));
         setRecipe(response.data);
       } catch (err) {
         console.error('Error fetching recipe details:', err);
