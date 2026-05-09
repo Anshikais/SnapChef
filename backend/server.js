@@ -5,14 +5,14 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk');
 const Recipe = require('./models/Recipe');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Gemini AI Setup
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Groq AI Setup
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Middleware
 app.use(cors());
@@ -37,7 +37,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // ==============================
-// SCAN IMAGE ROUTE - Real Gemini Vision
+// SCAN IMAGE ROUTE - Groq Vision
 // ==============================
 app.post('/scan-image', upload.single('image'), async (req, res) => {
   if (!req.file) {
@@ -47,35 +47,38 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
   try {
     console.log('Image uploaded:', req.file.path);
 
-    // Read image file and convert to base64
     const imageData = fs.readFileSync(req.file.path);
     const base64Image = imageData.toString('base64');
     const mimeType = req.file.mimetype;
 
-    // Use Gemini Vision to detect ingredients
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-   const prompt = `You are a food ingredient detector. 
+    const response = await groq.chat.completions.create({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `You are a food ingredient detector. 
 Look at this image carefully.
 If you see any food items, ingredients, vegetables, fruits, meat, dairy, or grocery items, list them all.
 Return ONLY a JSON array of ingredient names in lowercase, nothing else, no explanation.
 Example: ["tomatoes", "onion", "garlic", "eggs", "milk"]
 If you see absolutely no food items, return: []
-Be generous - even if partially visible, include it.`;
-
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: mimeType
+Be generous - even if partially visible, include it.`
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType};base64,${base64Image}` }
+            }
+          ]
         }
-      }
-    ]);
+      ]
+    });
 
-    const responseText = result.response.text().trim();
-    console.log('Gemini response:', responseText);
+    const responseText = response.choices[0].message.content.trim();
+    console.log('Groq response:', responseText);
 
-    // Parse the JSON array from response
     let detectedIngredients = [];
     try {
       const cleaned = responseText
@@ -83,25 +86,19 @@ Be generous - even if partially visible, include it.`;
         .replace(/```/g, '')
         .trim();
       detectedIngredients = JSON.parse(cleaned);
-
-      // Make sure it's an array
       if (!Array.isArray(detectedIngredients)) {
         detectedIngredients = [];
       }
     } catch (parseErr) {
-      console.error('Error parsing Gemini response:', parseErr);
+      console.error('Error parsing Groq response:', parseErr);
       detectedIngredients = [];
     }
 
     console.log('Detected ingredients:', detectedIngredients);
-
-    res.json({
-      message: 'Image scanned successfully',
-      ingredients: detectedIngredients
-    });
+    res.json({ message: 'Image scanned successfully', ingredients: detectedIngredients });
 
   } catch (error) {
-    console.error('Gemini API error:', error);
+    console.error('Groq API error:', error);
     res.status(500).json({ error: 'Failed to scan image' });
   }
 });
@@ -117,10 +114,8 @@ app.post('/recipes/match', async (req, res) => {
       return res.status(400).json({ error: 'Provide ingredients array' });
     }
 
-    // Normalize input
     const inputIngredients = ingredients.map(i => i.toLowerCase());
 
-    // Build query - filter by diet if provided
     let query = {};
     if (diet && diet !== 'all') {
       if (diet === 'veg') {
@@ -130,22 +125,16 @@ app.post('/recipes/match', async (req, res) => {
       }
     }
 
-    // Fetch recipes
     const recipes = await Recipe.find(query);
 
     const matchedRecipes = recipes.map(recipe => {
       let matchCount = 0;
-
       recipe.ingredients.forEach(ing => {
         if (inputIngredients.some(i => ing.includes(i))) {
           matchCount++;
         }
       });
-
-      return {
-        ...recipe.toObject(),
-        matchCount
-      };
+      return { ...recipe.toObject(), matchCount };
     });
 
     const result = matchedRecipes
@@ -173,7 +162,6 @@ app.get('/recipes/:id', async (req, res) => {
     }
 
     const recipe = await Recipe.findById(id);
-
     if (!recipe) {
       return res.status(404).json({ error: 'Recipe not found' });
     }
@@ -196,8 +184,12 @@ app.post('/api/ai/diet', async (req, res) => {
       return res.status(400).json({ error: 'Diet type is required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
+    const response = await groq.chat.completions.create({
+      model: 'llama3-70b-8192',
+      messages: [
+        {
+          role: 'user',
+          content: `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
 Suggest 3-5 recipes that match their diet goal.
 
 For each recipe, provide:
@@ -218,13 +210,16 @@ Also mention:
 - What health benefits it provides
 - Any ingredients to avoid for specific conditions (e.g., diabetes, hypertension)
 
-Format the response in clean Markdown with clear headings.`;
+Format the response in clean Markdown with clear headings.`
+        }
+      ]
+    });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = response.choices[0].message.content;
     res.json({ text });
+
   } catch (error) {
-    console.error('Gemini API error (diet):', error);
+    console.error('Groq API error (diet):', error);
     res.status(500).json({ error: 'Failed to generate recipes' });
   }
 });
@@ -239,45 +234,36 @@ app.post('/api/ai/dish', async (req, res) => {
       return res.status(400).json({ error: 'Dish name is required' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `You are an expert chef and culinary assistant. The user wants to make a specific dish but needs help with ingredients and method. The dish name is: ${dishName}.
+    const response = await groq.chat.completions.create({
+      model: 'llama3-70b-8192',
+      messages: [
+        {
+          role: 'user',
+          content: `You are an expert chef and culinary assistant. The user wants to make: ${dishName}.
 
 Respond with:
-1. **Ingredients List** (with exact measurements for 2 servings):
-   - Core ingredients
-   - Optional add-ons to enhance flavor
-   - Possible substitutes for common allergens
-
+1. **Ingredients List** (with exact measurements for 2 servings)
 2. **Equipment Needed**
+3. **Step-by-step Recipe** (beginner-friendly)
+4. **Pro Tips**
+5. **Nutritional Info** per serving
+6. **Variations** (eggless, gluten-free, healthier version)
 
-3. **Step-by-step Recipe** (beginner-friendly language)
+Format in clean Markdown with clear headings.`
+        }
+      ]
+    });
 
-4. **Pro Tips** to make it taste better
-
-5. **Nutritional Info** per serving:
-   - Calories, Protein, Carbs, Fats
-   - Key vitamins and minerals
-
-6. **Variations** (e.g., eggless version, gluten-free version, healthier version)
-
-Be conversational, encouraging, and assume the user is a beginner cook. Format the response in clean Markdown with clear headings.`;
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = response.choices[0].message.content;
     res.json({ text });
   } catch (error) {
-    console.error('Gemini API error (dish):', error);
+    console.error('Groq API error (dish):', error);
     res.status(500).json({ error: 'Failed to generate recipe' });
   }
 });
-
-// ==============================
-// BASIC ROUTE
-// ==============================
 app.get('/', (req, res) => {
   res.send('SnapChef API is running');
 });
-
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
