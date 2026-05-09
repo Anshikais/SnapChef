@@ -11,41 +11,54 @@ export default function RecipeDetails() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+
     const fetchRecipe = async () => {
+
       try {
+
         const response = await axios.get(
           `${process.env.REACT_APP_API_URL}/recipes/${id}`
         );
 
-        console.log('RECIPE DATA:', response.data);
+        console.log('Recipe Data:', response.data);
 
         setRecipe(response.data);
+
       } catch (err) {
-        console.error('Error fetching recipe details:', err);
+
+        console.error(err);
+
         setError('Failed to load recipe details.');
+
       } finally {
+
         setLoading(false);
+
       }
     };
 
     fetchRecipe();
+
   }, [id]);
 
-  // Loading
+  // Loading State
   if (loading) {
     return (
       <div className="container text-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
+        <div className="spinner-border text-danger" role="status">
+          <span className="visually-hidden">
+            Loading...
+          </span>
         </div>
       </div>
     );
   }
 
-  // Error
+  // Error State
   if (error || !recipe) {
     return (
       <div className="container py-5 text-center">
+
         <div className="alert alert-danger">
           {error || 'Recipe not found'}
         </div>
@@ -56,92 +69,120 @@ export default function RecipeDetails() {
         >
           Back to Home
         </button>
+
       </div>
     );
   }
 
-  const recipeTitle = recipe.recipeName || recipe.title || 'Recipe';
+  // -----------------------------
+  // FIXED INSTRUCTIONS LOGIC
+  // -----------------------------
+  let instructionSteps = [];
+
+  if (Array.isArray(recipe.instructions)) {
+
+    recipe.instructions.forEach(item => {
+
+      if (typeof item === 'string') {
+
+        item.split('|').forEach(step => {
+
+          const cleaned = step.trim();
+
+          if (cleaned.length > 0) {
+            instructionSteps.push(cleaned);
+          }
+
+        });
+
+      }
+
+    });
+
+  } else if (typeof recipe.instructions === 'string') {
+
+    instructionSteps = recipe.instructions
+      .split('|')
+      .map(step => step.trim())
+      .filter(Boolean);
+
+  }
+
+  // -----------------------------
+  // DYNAMIC IMAGE
+  // -----------------------------
+  const imageUrl =
+    recipe.imageUrl ||
+    `https://source.unsplash.com/600x400/?${encodeURIComponent(
+      recipe.title ||
+      recipe.cuisine ||
+      recipe.category ||
+      'food'
+    )}`;
 
   const youtubeSearchUrl =
     `https://www.youtube.com/results?search_query=` +
-    encodeURIComponent(recipeTitle + ' recipe');
-
-  // -----------------------------
-  // ROBUST INSTRUCTIONS PARSING
-  // -----------------------------
-  let instructionSteps = [];
-  
-  if (recipe.instructions) {
-    const rawInstr = recipe.instructions;
-
-    const parseString = (str) => {
-      if (!str) return [];
-      // 1. Check if it uses pipes
-      if (str.includes('|')) {
-        return str.split('|').map(s => s.trim()).filter(Boolean);
-      }
-      // 2. Check if it's just a giant string with periods
-      const sentences = str.split(/(?<=\.)\s+/).map(s => s.trim()).filter(Boolean);
-      if (sentences.length > 1) {
-        return sentences;
-      }
-      // 3. Fallback: single block of text
-      return [str.trim()];
-    };
-
-    if (Array.isArray(rawInstr)) {
-      instructionSteps = rawInstr
-        .flatMap(step => typeof step === 'string' ? parseString(step) : [])
-        .filter(Boolean);
-    } else if (typeof rawInstr === 'string') {
-      instructionSteps = parseString(rawInstr);
-    }
-  }
+    encodeURIComponent(`${recipe.title} recipe`);
 
   return (
-    <div className="container py-5 animate-fade-in">
+
+    <div
+      className="container py-5"
+      style={{
+        minHeight: '100vh',
+        color: 'white'
+      }}
+    >
 
       {/* Back Button */}
       <button
-        className="btn btn-outline-secondary mb-4 rounded-pill px-4"
+        className="btn btn-outline-light mb-4 rounded-pill px-4"
         onClick={() => navigate(-1)}
       >
-        ← Back to Results
+        ← Back
       </button>
 
-      <div className="row g-4">
+      <div className="row g-5 align-items-start">
 
         {/* LEFT SIDE */}
-        <div className="col-md-5">
+        <div className="col-lg-5">
 
-          <img
-            src={
-              recipe.imageUrl ||
-              'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop'
-            }
-            alt={recipeTitle}
-            className="img-fluid rounded shadow w-100"
+          {/* Recipe Image */}
+          <div
             style={{
-              objectFit: 'cover',
-              maxHeight: '300px'
+              overflow: 'hidden',
+              borderRadius: '20px'
             }}
-            onError={(e) => {
-              e.target.src =
-                'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop';
-            }}
-          />
+          >
+
+            <img
+              src={imageUrl}
+              alt={recipe.title}
+              className="img-fluid shadow-lg w-100"
+              style={{
+                height: '350px',
+                objectFit: 'cover',
+                transition: '0.4s'
+              }}
+              onError={(e) => {
+                e.target.src =
+                  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600';
+              }}
+            />
+
+          </div>
 
           {/* Badges */}
-          <div className="mt-3 d-flex flex-wrap gap-2">
+          <div className="d-flex flex-wrap gap-2 mt-4">
 
             {recipe.cuisine && (
-              <span className="badge bg-secondary px-3 py-2">
+              <span className="badge bg-primary px-3 py-2">
                 🌍 {recipe.cuisine}
               </span>
             )}
 
             {recipe.course && (
-              <span className="badge bg-secondary px-3 py-2">
+              <span className="badge bg-warning text-dark px-3 py-2">
                 🍽️ {recipe.course}
               </span>
             )}
@@ -149,18 +190,11 @@ export default function RecipeDetails() {
             {recipe.diet && (
               <span
                 className={`badge px-3 py-2 ${
-                  recipe.diet
-                    .toLowerCase()
-                    .includes('vegetarian')
+                  recipe.diet.toLowerCase().includes('vegetarian')
                     ? 'bg-success'
                     : 'bg-danger'
                 }`}
               >
-                {recipe.diet
-                  .toLowerCase()
-                  .includes('vegetarian')
-                  ? '🥦'
-                  : '🍗'}{' '}
                 {recipe.diet}
               </span>
             )}
@@ -172,7 +206,7 @@ export default function RecipeDetails() {
             )}
 
             {recipe.cook_time && (
-              <span className="badge bg-info text-dark px-3 py-2">
+              <span className="badge bg-secondary px-3 py-2">
                 🔥 Cook: {recipe.cook_time}
               </span>
             )}
@@ -182,6 +216,7 @@ export default function RecipeDetails() {
                 ⭐ {Number(recipe.rating).toFixed(1)}
               </span>
             )}
+
           </div>
 
           {/* YouTube Button */}
@@ -189,27 +224,33 @@ export default function RecipeDetails() {
             href={youtubeSearchUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-danger w-100 mt-3 rounded-pill fw-semibold"
+            className="btn btn-danger w-100 mt-4 rounded-pill fw-bold"
           >
-            ▶ Watch Recipe Video on YouTube
+            ▶ Watch Recipe Video
           </a>
+
         </div>
 
         {/* RIGHT SIDE */}
-        <div className="col-md-7">
+        <div className="col-lg-7">
 
           {/* Title */}
-          <h2 className="fw-bold mb-3">
-            {recipeTitle}
-          </h2>
+          <h1
+            className="fw-bold mb-3"
+            style={{
+              fontSize: '2.4rem'
+            }}
+          >
+            {recipe.title}
+          </h1>
 
           {/* Description */}
           {recipe.description && (
             <p
               style={{
-                color: '#ccc',
-                lineHeight: '1.7',
-                marginBottom: '1.5rem'
+                color: '#d1d1d1',
+                lineHeight: '1.8',
+                fontSize: '1.05rem'
               }}
             >
               {recipe.description}
@@ -217,30 +258,32 @@ export default function RecipeDetails() {
           )}
 
           {/* Ingredients */}
-          <div className="mb-4">
+          <div className="mt-5">
 
-            <h4 className="fw-semibold mb-3">
+            <h3 className="fw-bold mb-4">
               🛒 Ingredients
-            </h4>
+            </h3>
 
             {Array.isArray(recipe.ingredients) &&
             recipe.ingredients.length > 0 ? (
 
               <div className="d-flex flex-wrap gap-2">
 
-                {recipe.ingredients.map((ing, index) => (
+                {recipe.ingredients.map((item, index) => (
+
                   <span
                     key={index}
+                    className="badge rounded-pill"
                     style={{
-                      fontSize: '1rem',
+                      background: '#2d2d2d',
                       color: '#fff',
-                      borderBottom:
-                        '1px solid rgba(255,255,255,0.2)',
-                      paddingBottom: '3px'
+                      padding: '10px 16px',
+                      fontSize: '0.95rem'
                     }}
                   >
-                    • {ing}
+                    {item}
                   </span>
+
                 ))}
 
               </div>
@@ -248,18 +291,19 @@ export default function RecipeDetails() {
             ) : (
 
               <p style={{ color: '#aaa' }}>
-                No ingredients listed.
+                No ingredients available.
               </p>
 
             )}
+
           </div>
 
           {/* Instructions */}
-          <div>
+          <div className="mt-5">
 
-            <h4 className="fw-semibold mb-3">
+            <h3 className="fw-bold mb-4">
               📋 Instructions
-            </h4>
+            </h3>
 
             {instructionSteps.length > 0 ? (
 
@@ -267,28 +311,34 @@ export default function RecipeDetails() {
 
                 <div
                   key={index}
-                  className="d-flex gap-3 mb-3 align-items-start"
+                  className="d-flex align-items-start gap-3 mb-4"
                 >
 
-                  <span
-                    className="fw-bold text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                  {/* Step Number */}
+                  <div
+                    className="d-flex align-items-center justify-content-center fw-bold"
                     style={{
-                      width: '30px',
-                      height: '30px',
-                      minWidth: '30px',
-                      background: '#e74c3c',
-                      fontSize: '0.85rem'
+                      width: '36px',
+                      height: '36px',
+                      minWidth: '36px',
+                      borderRadius: '50%',
+                      background: '#ff4d4d',
+                      color: '#fff'
                     }}
                   >
                     {index + 1}
-                  </span>
+                  </div>
 
-                  <p
-                    className="mb-0 lh-lg"
-                    style={{ color: '#fff' }}
+                  {/* Step Text */}
+                  <div
+                    style={{
+                      color: '#f1f1f1',
+                      lineHeight: '1.8',
+                      fontSize: '1rem'
+                    }}
                   >
                     {step}
-                  </p>
+                  </div>
 
                 </div>
 
@@ -301,6 +351,7 @@ export default function RecipeDetails() {
               </p>
 
             )}
+
           </div>
 
         </div>
