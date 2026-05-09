@@ -253,7 +253,10 @@ Format in clean Markdown with clear headings.`
         }
       ]
     });
-
+app.get('/recipes/all', async (req, res) => {
+  const recipes = await Recipe.find().limit(5);
+  res.json(recipes);
+});
     const text = response.choices[0].message.content;
     res.json({ text });
   } catch (error) {
