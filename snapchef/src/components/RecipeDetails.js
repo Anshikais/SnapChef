@@ -45,9 +45,16 @@ export default function RecipeDetails() {
     );
   }
 
-  // Use recipe.title (matches DB field)
   const recipeTitle = recipe.title || 'Recipe';
   const youtubeSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(recipeTitle + ' recipe')}`;
+
+  // Handle instructions — could be array or pipe-separated string
+  let instructionSteps = [];
+  if (Array.isArray(recipe.instructions) && recipe.instructions.length > 0) {
+    instructionSteps = recipe.instructions;
+  } else if (typeof recipe.instructions === 'string' && recipe.instructions.length > 0) {
+    instructionSteps = recipe.instructions.split('|').map(s => s.trim()).filter(Boolean);
+  }
 
   return (
     <div className="container py-5 animate-fade-in">
@@ -60,8 +67,8 @@ export default function RecipeDetails() {
       </button>
 
       <div className="row g-4">
+        {/* LEFT: Image + Badges + YouTube */}
         <div className="col-md-5">
-          {/* Recipe Image */}
           <img
             src={recipe.imageUrl || "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop"}
             alt={recipeTitle}
@@ -72,47 +79,29 @@ export default function RecipeDetails() {
             }}
           />
 
-          {/* Recipe Meta Badges */}
           <div className="mt-3 d-flex flex-wrap gap-2">
             {recipe.cuisine && (
-              <span className="badge bg-secondary px-3 py-2">
-                🌍 {recipe.cuisine}
-              </span>
+              <span className="badge bg-secondary px-3 py-2">🌍 {recipe.cuisine}</span>
             )}
             {recipe.course && (
-              <span className="badge bg-secondary px-3 py-2">
-                🍽️ {recipe.course}
-              </span>
+              <span className="badge bg-secondary px-3 py-2">🍽️ {recipe.course}</span>
             )}
             {recipe.diet && (
-              <span
-                className={`badge px-3 py-2 ${
-                  recipe.diet.toLowerCase().includes('vegetarian')
-                    ? 'bg-success'
-                    : 'bg-danger'
-                }`}
-              >
+              <span className={`badge px-3 py-2 ${recipe.diet.toLowerCase().includes('vegetarian') ? 'bg-success' : 'bg-danger'}`}>
                 {recipe.diet.toLowerCase().includes('vegetarian') ? '🥦' : '🍗'} {recipe.diet}
               </span>
             )}
             {recipe.prep_time && (
-              <span className="badge bg-info text-dark px-3 py-2">
-                ⏱️ Prep: {recipe.prep_time}
-              </span>
+              <span className="badge bg-info text-dark px-3 py-2">⏱️ Prep: {recipe.prep_time}</span>
             )}
             {recipe.cook_time && (
-              <span className="badge bg-info text-dark px-3 py-2">
-                🔥 Cook: {recipe.cook_time}
-              </span>
+              <span className="badge bg-info text-dark px-3 py-2">🔥 Cook: {recipe.cook_time}</span>
             )}
             {recipe.rating > 0 && (
-              <span className="badge bg-warning text-dark px-3 py-2">
-                ⭐ {Number(recipe.rating).toFixed(1)}
-              </span>
+              <span className="badge bg-warning text-dark px-3 py-2">⭐ {Number(recipe.rating).toFixed(1)}</span>
             )}
           </div>
 
-          {/* YouTube Button */}
           <a
             href={youtubeSearchUrl}
             target="_blank"
@@ -123,62 +112,65 @@ export default function RecipeDetails() {
           </a>
         </div>
 
-        {/* RIGHT: Title + Ingredients + Instructions */}
+        {/* RIGHT: Title + Description + Ingredients + Instructions */}
         <div className="col-md-7">
+          <h2 className="fw-bold mb-3">{recipeTitle}</h2>
 
-          {/* Recipe Title */}
-          <h2 className="fw-bold mb-4">{recipeTitle}</h2>
-
-          {/* Description */}
+          {/* Description — fixed visibility */}
           {recipe.description && (
-            <p className="text-muted mb-4">{recipe.description}</p>
+            <p style={{ color: '#ccc', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+              {recipe.description}
+            </p>
           )}
 
           {/* Ingredients */}
           <div className="mb-4">
             <h4 className="fw-semibold mb-3">🛒 Ingredients</h4>
-            <div className="d-flex flex-wrap gap-2">
-              {Array.isArray(recipe.ingredients) && recipe.ingredients.map((ing, index) => (
-                <span
-                  key={index}
-                  style={{
-                    fontSize: '1.1rem',
-                    color: 'inherit',
-                    borderBottom: '1px solid rgba(128,128,128,0.3)',
-                    paddingBottom: '3px'
-                  }}
-                >
-                  • {ing}
-                </span>
-              ))}
-            </div>
+            {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 ? (
+              <div className="d-flex flex-wrap gap-2">
+                {recipe.ingredients.map((ing, index) => (
+                  <span
+                    key={index}
+                    style={{
+                      fontSize: '1rem',
+                      color: '#fff',
+                      borderBottom: '1px solid rgba(255,255,255,0.2)',
+                      paddingBottom: '3px'
+                    }}
+                  >
+                    • {ing}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: '#aaa' }}>No ingredients listed.</p>
+            )}
           </div>
 
           {/* Instructions */}
           <div>
             <h4 className="fw-semibold mb-3">📋 Instructions</h4>
-            <div>
-              {Array.isArray(recipe.instructions)
-                ? recipe.instructions.map((step, index) => (
-                    <div key={index} className="d-flex gap-3 mb-3 align-items-start">
-                      <span
-                        className="fw-bold text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          minWidth: '28px',
-                          background: '#e74c3c',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        {index + 1}
-                      </span>
-                      <p className="mb-0 lh-lg">{step}</p>
-                    </div>
-                  ))
-                : <p>{recipe.instructions}</p>
-              }
-            </div>
+            {instructionSteps.length > 0 ? (
+              instructionSteps.map((step, index) => (
+                <div key={index} className="d-flex gap-3 mb-3 align-items-start">
+                  <span
+                    className="fw-bold text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      minWidth: '28px',
+                      background: '#e74c3c',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <p className="mb-0 lh-lg" style={{ color: '#fff' }}>{step}</p>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: '#aaa' }}>No instructions available.</p>
+            )}
           </div>
 
         </div>
