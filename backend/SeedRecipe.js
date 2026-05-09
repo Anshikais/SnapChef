@@ -40,54 +40,38 @@ async function seed() {
   await Recipe.deleteMany({});
 
   const recipes = [];
+fs.createReadStream('food_recipes.csv')
+  .pipe(csv({
+    mapHeaders: ({ header }) => header.trim()
+  }))
+  .on('data', (row) => {
 
-  fs.createReadStream('food_recipes.csv')
-    .pipe(csv())
-    .on('data', (row) => {
-      try {
-        recipes.push({
-          title: row.recipe_title || '',
-          description: row.description || '',
-          cuisine: row.cuisine || '',
-          course: row.course || '',
-          diet: row.diet || '',
-          prep_time: row.prep_time || '',
-          cook_time: row.cook_time || '',
+    console.log(row);
+    process.exit();
 
-          ingredients: parseList(row.ingredients),
+    try {
+      recipes.push({
+        title: row.recipe_title || '',
+        description: row.description || '',
+        cuisine: row.cuisine || '',
+        course: row.course || '',
+        diet: row.diet || '',
+        prep_time: row.prep_time || '',
+        cook_time: row.cook_time || '',
 
-          instructions: parseList(row.instructions),
+        ingredients: parseList(row.ingredients),
 
-          author: row.author || '',
-          tags: parseList(row.tags),
+        instructions: parseList(row.instructions),
 
-          category: row.category || '',
-          rating: parseFloat(row.rating) || 0,
-          url: row.url || '',
-        });
-      } catch (err) {
-        console.log('Row Error:', err.message);
-      }
-    })
-    .on('end', async () => {
-      console.log('Parsed Recipes:', recipes.length);
+        author: row.author || '',
+        tags: parseList(row.tags),
 
-      for (let i = 0; i < recipes.length; i += 500) {
-        await Recipe.insertMany(
-          recipes.slice(i, i + 500),
-          { ordered: false }
-        );
-
-        console.log(`Batch ${i / 500 + 1} inserted`);
-      }
-
-      console.log('Seeding completed');
-
-      process.exit();
-    });
+        category: row.category || '',
+        rating: parseFloat(row.rating) || 0,
+        url: row.url || '',
+      });
+    } catch (err) {
+      console.log('Row Error:', err.message);
+    }
+  });
 }
-
-seed().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
