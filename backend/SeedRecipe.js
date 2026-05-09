@@ -33,45 +33,97 @@ function parseList(text) {
 }
 
 async function seed() {
-  await mongoose.connect(process.env.MONGO_URI);
+  try {
+    // MongoDB Connect
+    await mongoose.connect(process.env.MONGO_URI);
 
-  console.log('MongoDB Connected');
+    console.log('MongoDB Connected');
 
-  await Recipe.deleteMany({});
+    // Delete old recipes
+    await Recipe.deleteMany({});
+    console.log('Old recipes deleted');
 
-  const recipes = [];
-fs.createReadStream('food_recipes.csv')
-  .pipe(csv({
-    mapHeaders: ({ header }) => header.trim()
-  }))
-  .on('data', (row) => {
+    const recipes = [];
 
-    console.log(row);
-    process.exit();
+    fs.createReadStream('food_recipes.csv')
+      .pipe(
+        csv({
+          mapHeaders: ({ header }) => header.trim(),
+        })
+      )
 
-    try {
-      recipes.push({
-        title: row.recipe_title || '',
-        description: row.description || '',
-        cuisine: row.cuisine || '',
-        course: row.course || '',
-        diet: row.diet || '',
-        prep_time: row.prep_time || '',
-        cook_time: row.cook_time || '',
+      .on('data', (row) => {
+        try {
+          // DEBUG
+          console.log('ROW DATA:', row);
 
-        ingredients: parseList(row.ingredients),
+          recipes.push({
+            title: row.recipe_title || '',
+            description: row.description || '',
+            cuisine: row.cuisine || '',
+            course: row.course || '',
+            diet: row.diet || '',
+            prep_time: row.prep_time || '',
+            cook_time: row.cook_time || '',
 
-        instructions: parseList(row.instructions),
+            ingredients: parseList(
+              row.ingredients || row.Ingredients || ''
+            ),
 
-        author: row.author || '',
-        tags: parseList(row.tags),
+            instructions: parseList(
+              row.instructions ||
+              row.Instructions ||
+              row.directions ||
+              row.steps ||
+              ''
+            ),
 
-        category: row.category || '',
-        rating: parseFloat(row.rating) || 0,
-        url: row.url || '',
+            author: row.author || '',
+
+            tags: parseList(
+              row.tags || ''
+            ),
+
+            category: row.category || '',
+
+            rating: parseFloat(row.rating) || 0,
+
+            url: row.url || '',
+          });
+        } catch (err) {
+          console.log('Row Error:', err.message);
+        }
+      })
+
+      .on('end', async () => {
+        try {
+          console.log('Parsed Recipes:', recipes.length);
+
+          for (let i = 0; i < recipes.length; i += 500) {
+            await Recipe.insertMany(
+              recipes.slice(i, i + 500),
+              { ordered: false }
+            );
+
+            console.log(`Batch ${i / 500 + 1} inserted`);
+          }
+
+          console.log('Seeding Completed Successfully');
+
+          process.exit();
+        } catch (err) {
+          console.log('Insert Error:', err.message);
+          process.exit(1);
+        }
+      })
+
+      .on('error', (err) => {
+        console.log('CSV Error:', err.message);
       });
-    } catch (err) {
-      console.log('Row Error:', err.message);
-    }
-  });
+
+  } catch (err) {
+    console.log('MongoDB Error:', err.message);
+  }
 }
+
+seed();
