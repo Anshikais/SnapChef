@@ -60,35 +60,42 @@ export default function RecipeDetails() {
     );
   }
 
-  const recipeTitle = recipe.title || 'Recipe';
+  const recipeTitle = recipe.recipeName || recipe.title || 'Recipe';
 
   const youtubeSearchUrl =
     `https://www.youtube.com/results?search_query=` +
     encodeURIComponent(recipeTitle + ' recipe');
 
   // -----------------------------
-  // FIXED INSTRUCTIONS HANDLING
+  // ROBUST INSTRUCTIONS PARSING
   // -----------------------------
   let instructionSteps = [];
+  
+  if (recipe.instructions) {
+    const rawInstr = recipe.instructions;
 
-  if (Array.isArray(recipe.instructions)) {
-    instructionSteps = recipe.instructions
-      .flatMap(step =>
-        typeof step === 'string'
-          ? step.split('|')
-          : []
-      )
-      .map(step => step.trim())
-      .filter(Boolean);
+    const parseString = (str) => {
+      if (!str) return [];
+      // 1. Check if it uses pipes
+      if (str.includes('|')) {
+        return str.split('|').map(s => s.trim()).filter(Boolean);
+      }
+      // 2. Check if it's just a giant string with periods
+      const sentences = str.split(/(?<=\.)\s+/).map(s => s.trim()).filter(Boolean);
+      if (sentences.length > 1) {
+        return sentences;
+      }
+      // 3. Fallback: single block of text
+      return [str.trim()];
+    };
 
-  } else if (
-    typeof recipe.instructions === 'string' &&
-    recipe.instructions.length > 0
-  ) {
-    instructionSteps = recipe.instructions
-      .split('|')
-      .map(step => step.trim())
-      .filter(Boolean);
+    if (Array.isArray(rawInstr)) {
+      instructionSteps = rawInstr
+        .flatMap(step => typeof step === 'string' ? parseString(step) : [])
+        .filter(Boolean);
+    } else if (typeof rawInstr === 'string') {
+      instructionSteps = parseString(rawInstr);
+    }
   }
 
   return (

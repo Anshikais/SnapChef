@@ -110,13 +110,19 @@ app.post('/recipes/match', async (req, res) => {
   try {
     const { ingredients, diet } = req.body;
 
-    if (!ingredients || !Array.isArray(ingredients)) {
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
       return res.status(400).json({ error: 'Provide ingredients array' });
     }
 
     const inputIngredients = ingredients.map(i => i.toLowerCase());
 
-    let query = {};
+    // Optimize: Fetch only recipes matching at least ONE ingredient
+    const regexIngredients = inputIngredients.map(i => new RegExp(i, 'i'));
+    
+    let query = {
+      ingredients: { $in: regexIngredients }
+    };
+    
     if (diet && diet !== 'all') {
       if (diet === 'veg') {
         query.diet = { $regex: /vegetarian/i };
@@ -125,16 +131,19 @@ app.post('/recipes/match', async (req, res) => {
       }
     }
 
-    const recipes = await Recipe.find(query);
+    // Optimize: Limit database load and use lean() for plain JS objects
+    const recipes = await Recipe.find(query).limit(500).lean();
 
     const matchedRecipes = recipes.map(recipe => {
       let matchCount = 0;
-      recipe.ingredients.forEach(ing => {
-        if (inputIngredients.some(i => ing.includes(i))) {
-          matchCount++;
-        }
-      });
-      return { ...recipe.toObject(), matchCount };
+      if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+        recipe.ingredients.forEach(ing => {
+          if (inputIngredients.some(i => ing.includes(i))) {
+            matchCount++;
+          }
+        });
+      }
+      return { ...recipe, matchCount };
     });
 
     const result = matchedRecipes

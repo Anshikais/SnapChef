@@ -263,3 +263,22 @@ body.dark-mode .alert-danger {
   border: 1px solid #4a2a2a;
 }
 
+/* --- Custom Badge for ingredients --- */
+.custom-ing-badge {
+  background-color: #f8f9fa;
+  color: #495057;
+  font-weight: 500;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+body.dark-mode .custom-ing-badge {
+  background-color: #2b2b2b;
+  color: #e0e0e0;
+  border-color: #444 !important;
+}
+
+.recipe-card:hover .recipe-card-img {
+  transform: scale(1.08);
+}
