@@ -1,78 +1,154 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-export default function RecipeCards({ recipes }) {
-  if (!recipes || recipes.length === 0) return null;
-  return (
-    <div className="recipes-section animate-fade-in pb-5">
-      <h3 className="mb-4 d-flex align-items-center gap-2">
-        <span></span> Suggested Recipes
-      </h3>
-      <div className="row g-4">
-        {recipes.map((recipe, index) => (
-          <div key={recipe._id || index} className="col-md-6 col-lg-4">
-            <div className="card recipe-card h-100 shadow-sm">
-              {/* IMAGE SECTION */}
-              <div className="position-relative overflow-hidden">
-                <img
-                  src={recipe.imageUrl || `https://images.unsplash.com/photo-${[
-                    '1504674900247-0877df9cc836',
-                    '1555939594-58d7cb561ad1',
-                    '1567620905732-2d1ec7ab7445',
-                    '1476224203421-9ac39bcb3327',
-                    '1414235077428-338989a2e8c0',
-                    '1484723091739-30a097e8f929',
-                    '1546069901-ba9599a7e63c',
-                    '1604908176997-4315fbd6f6e4'
-                  ][((recipe.recipeName || '').length + index) % 8]}?w=600&h=400&fit=crop`}
-                  alt={recipe.recipeName}
-                  className="card-img-top recipe-card-img"
-                  style={{ height: "200px", objectFit: "cover", transition: "transform 0.5s ease" }}
-                  onError={(e) => {
-                    e.target.src = "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop";
-                  }}
-                />
-                <div className="position-absolute bottom-0 w-100" style={{ height: "50%", background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }}></div>
-              </div>
-              {/*  CONTENT */}
-              <div className="card-body d-flex flex-column">
-                <h5 className="card-title fw-bold">
-                  {recipe.recipeName}
-                </h5>
-                <p className="card-text text-muted mb-2">
-                  <small>Ingredients:</small>
-                </p>
-                {/*  INGREDIENT LIST */}
-                <div className="d-flex flex-wrap gap-2 mb-3 mt-2">
-                  {recipe.ingredients?.slice(0, 5).map((ing, i) => {
-                    const cleanIng = ing
-                      .replace(/[0-9/.-]+/g, "")
-                      .replace(/cups?|tablespoons?|teaspoons?|tbsp|tsp|ounces?|inch/gi, "")
-                      .replace(/\s+/g, " ")
-                      .trim();
-                    return (
-                      <span key={i} className="badge custom-ing-badge border">
-                        {cleanIng}
-                      </span>
-                    );
-                  })}
-                  {recipe.ingredients?.length > 5 && (
-                    <span className="badge bg-secondary opacity-75 align-self-center ms-1">
-                      +{recipe.ingredients.length - 5} more
-                    </span>
-                  )}
-                </div>
-                {/*  BUTTON */}
-                <Link
-                  to={`/recipe/${recipe._id}`}
-                  className="btn btn-outline-danger w-100 rounded-pill mt-auto"
-                >
-                  View Recipe
-                </Link>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+<div
+  className="card h-100 border-0 shadow-lg"
+  style={{
+    background: '#161616',
+    borderRadius: '20px',
+    overflow: 'hidden',
+    transition: '0.3s',
+    color: 'white'
+  }}
+>
+
+  {/* IMAGE */}
+  <img
+    src={`https://source.unsplash.com/600x400/?${encodeURIComponent(
+      recipe.title || recipe.cuisine || 'food'
+    )}`}
+    alt={recipe.title}
+    className="card-img-top"
+    style={{
+      height: '220px',
+      objectFit: 'cover'
+    }}
+    onError={(e) => {
+      e.target.src =
+        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600';
+    }}
+  />
+
+  {/* CARD BODY */}
+  <div className="card-body d-flex flex-column p-4">
+
+    {/* RECIPE NAME */}
+    <h4
+      className="fw-bold mb-3"
+      style={{
+        color: '#ffffff',
+        lineHeight: '1.4'
+      }}
+    >
+      {recipe.title}
+    </h4>
+
+    {/* DESCRIPTION */}
+    <p
+      style={{
+        color: '#cfcfcf',
+        fontSize: '0.95rem',
+        lineHeight: '1.6'
+      }}
+    >
+      {recipe.description
+        ? recipe.description.slice(0, 100) + '...'
+        : 'Delicious recipe for your meal.'}
+    </p>
+
+    {/* BADGES */}
+    <div className="d-flex flex-wrap gap-2 mb-3">
+
+      {recipe.cuisine && (
+        <span className="badge bg-danger px-3 py-2">
+          🌍 {recipe.cuisine}
+        </span>
+      )}
+
+      {recipe.course && (
+        <span className="badge bg-secondary px-3 py-2">
+          🍽️ {recipe.course}
+        </span>
+      )}
+
+      {recipe.diet && (
+        <span
+          className={`badge px-3 py-2 ${
+            recipe.diet.toLowerCase().includes('vegetarian')
+              ? 'bg-success'
+              : 'bg-warning text-dark'
+          }`}
+        >
+          {recipe.diet}
+        </span>
+      )}
+
     </div>
-  );
-}
+
+    {/* INGREDIENT TITLE */}
+    <h6
+      className="fw-semibold mb-3"
+      style={{
+        color: '#ffffff',
+        fontSize: '1rem'
+      }}
+    >
+      Ingredients:
+    </h6>
+
+    {/* INGREDIENTS */}
+    <div className="d-flex flex-wrap gap-2 mb-4">
+
+      {Array.isArray(recipe.ingredients) &&
+      recipe.ingredients.length > 0 ? (
+
+        <>
+          {recipe.ingredients.slice(0, 5).map((item, index) => (
+
+            <span
+              key={index}
+              className="badge rounded-pill"
+              style={{
+                background: '#2f2f2f',
+                color: '#ffffff',
+                padding: '10px 14px',
+                fontWeight: '500',
+                border: '1px solid rgba(255,255,255,0.15)'
+              }}
+            >
+              {item}
+            </span>
+
+          ))}
+
+          {recipe.ingredients.length > 5 && (
+            <span
+              className="badge rounded-pill"
+              style={{
+                background: '#555',
+                color: '#fff',
+                padding: '10px 14px'
+              }}
+            >
+              +{recipe.ingredients.length - 5} more
+            </span>
+          )}
+        </>
+
+      ) : (
+
+        <span style={{ color: '#aaa' }}>
+          No ingredients available
+        </span>
+
+      )}
+
+    </div>
+
+    {/* BUTTON */}
+    <button
+      className="btn btn-outline-danger mt-auto rounded-pill py-2 fw-semibold"
+      onClick={() => navigate(`/recipe/${recipe._id}`)}
+    >
+      View Recipe
+    </button>
+
+  </div>
+</div>
