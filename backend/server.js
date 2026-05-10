@@ -205,7 +205,7 @@ app.post('/api/ai/diet', async (req, res) => {
     }
 
     const response = await groq.chat.completions.create({
-      model: 'llama3-70b-8192',
+     model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'user',
@@ -255,7 +255,7 @@ app.post('/api/ai/dish', async (req, res) => {
     }
 
     const response = await groq.chat.completions.create({
-      model: 'llama3-70b-8192',
+    model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'user',
