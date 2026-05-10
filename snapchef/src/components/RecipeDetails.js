@@ -11,34 +11,22 @@ export default function RecipeDetails() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-
     const fetchRecipe = async () => {
-
       try {
-
         const response = await axios.get(
           `${process.env.REACT_APP_API_URL}/recipes/${id}`
         );
-
         console.log('Recipe Data:', response.data);
-
         setRecipe(response.data);
-
       } catch (err) {
-
         console.error(err);
-
         setError('Failed to load recipe details.');
-
       } finally {
-
         setLoading(false);
-
       }
     };
 
     fetchRecipe();
-
   }, [id]);
 
   // Loading State
@@ -46,9 +34,7 @@ export default function RecipeDetails() {
     return (
       <div className="container text-center py-5">
         <div className="spinner-border text-danger" role="status">
-          <span className="visually-hidden">
-            Loading...
-          </span>
+          <span className="visually-hidden">Loading...</span>
         </div>
       </div>
     );
@@ -58,74 +44,64 @@ export default function RecipeDetails() {
   if (error || !recipe) {
     return (
       <div className="container py-5 text-center">
-
         <div className="alert alert-danger">
           {error || 'Recipe not found'}
         </div>
-
         <button
           className="btn btn-secondary mt-3"
           onClick={() => navigate('/')}
         >
           Back to Home
         </button>
-
       </div>
     );
   }
 
   // -----------------------------
-  // FIXED INSTRUCTIONS LOGIC
-  // -----------------------------
-  let instructionSteps = [];
-
-  if (Array.isArray(recipe.instructions)) {
-
-    recipe.instructions.forEach(item => {
-
-      if (typeof item === 'string') {
-
-        item.split('|').forEach(step => {
-
-          const cleaned = step.trim();
-
-          if (cleaned.length > 0) {
-            instructionSteps.push(cleaned);
-          }
-
-        });
-
-      }
-
-    });
-
-  } else if (typeof recipe.instructions === 'string') {
-
-    instructionSteps = recipe.instructions
-      .split('|')
-      .map(step => step.trim())
-      .filter(Boolean);
-
-  }
-
-  // -----------------------------
-  // DYNAMIC IMAGE
+  // FIXED: UNIQUE IMAGE URL
+  // Uses recipe.title to ensure different images per recipe
   // -----------------------------
   const imageUrl =
     recipe.imageUrl ||
-    `https://source.unsplash.com/600x400/?${encodeURIComponent(
-      recipe.title ||
-      recipe.cuisine ||
-      recipe.category ||
-      'food'
-    )}`;
+    (recipe.title
+      ? `https://source.unsplash.com/600x400/?${encodeURIComponent(
+          recipe.title + ' food'
+        )}`
+      : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600');
+
+  // -----------------------------
+  // FIXED: ROBUST INSTRUCTION PARSING
+  // Handles string (with | or newline), array, null/undefined
+  // -----------------------------
+  let instructionSteps = [];
+
+  if (recipe.instructions) {
+    if (Array.isArray(recipe.instructions)) {
+      // Flatten and split each element if it contains separators
+      instructionSteps = recipe.instructions.flatMap(item => {
+        if (typeof item === 'string') {
+          return item.split(/[|\n]/).map(s => s.trim()).filter(Boolean);
+        }
+        return [];
+      });
+    } else if (typeof recipe.instructions === 'string') {
+      instructionSteps = recipe.instructions
+        .split(/[|\n]/)
+        .map(step => step.trim())
+        .filter(Boolean);
+    }
+  }
+
+  // Fallback if no instructions found
+  if (instructionSteps.length === 0) {
+    instructionSteps = ['No instructions provided for this recipe.'];
+  }
 
   const youtubeSearchUrl =
     `https://www.youtube.com/results?search_query=` +
     encodeURIComponent(`${recipe.title} recipe`);
 
   return (
-
     <div
       className="container py-5"
       style={{
@@ -133,7 +109,6 @@ export default function RecipeDetails() {
         color: 'white'
       }}
     >
-
       {/* Back Button */}
       <button
         className="btn btn-outline-light mb-4 rounded-pill px-4"
@@ -143,10 +118,8 @@ export default function RecipeDetails() {
       </button>
 
       <div className="row g-5 align-items-start">
-
         {/* LEFT SIDE */}
         <div className="col-lg-5">
-
           {/* Recipe Image */}
           <div
             style={{
@@ -154,7 +127,6 @@ export default function RecipeDetails() {
               borderRadius: '20px'
             }}
           >
-
             <img
               src={imageUrl}
               alt={recipe.title}
@@ -169,24 +141,20 @@ export default function RecipeDetails() {
                   'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600';
               }}
             />
-
           </div>
 
           {/* Badges */}
           <div className="d-flex flex-wrap gap-2 mt-4">
-
             {recipe.cuisine && (
               <span className="badge bg-primary px-3 py-2">
                 🌍 {recipe.cuisine}
               </span>
             )}
-
             {recipe.course && (
               <span className="badge bg-warning text-dark px-3 py-2">
                 🍽️ {recipe.course}
               </span>
             )}
-
             {recipe.diet && (
               <span
                 className={`badge px-3 py-2 ${
@@ -198,25 +166,21 @@ export default function RecipeDetails() {
                 {recipe.diet}
               </span>
             )}
-
             {recipe.prep_time && (
               <span className="badge bg-info text-dark px-3 py-2">
                 ⏱️ Prep: {recipe.prep_time}
               </span>
             )}
-
             {recipe.cook_time && (
               <span className="badge bg-secondary px-3 py-2">
                 🔥 Cook: {recipe.cook_time}
               </span>
             )}
-
             {recipe.rating > 0 && (
               <span className="badge bg-warning text-dark px-3 py-2">
                 ⭐ {Number(recipe.rating).toFixed(1)}
               </span>
             )}
-
           </div>
 
           {/* YouTube Button */}
@@ -228,12 +192,10 @@ export default function RecipeDetails() {
           >
             ▶ Watch Recipe Video
           </a>
-
         </div>
 
         {/* RIGHT SIDE */}
         <div className="col-lg-7">
-
           {/* Title */}
           <h1
             className="fw-bold mb-3"
@@ -259,18 +221,10 @@ export default function RecipeDetails() {
 
           {/* Ingredients */}
           <div className="mt-5">
-
-            <h3 className="fw-bold mb-4">
-              🛒 Ingredients
-            </h3>
-
-            {Array.isArray(recipe.ingredients) &&
-            recipe.ingredients.length > 0 ? (
-
+            <h3 className="fw-bold mb-4">🛒 Ingredients</h3>
+            {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0 ? (
               <div className="d-flex flex-wrap gap-2">
-
                 {recipe.ingredients.map((item, index) => (
-
                   <span
                     key={index}
                     className="badge rounded-pill"
@@ -283,77 +237,58 @@ export default function RecipeDetails() {
                   >
                     {item}
                   </span>
-
                 ))}
-
               </div>
-
             ) : (
-
-              <p style={{ color: '#aaa' }}>
-                No ingredients available.
-              </p>
-
+              <p style={{ color: '#aaa' }}>No ingredients available.</p>
             )}
-
           </div>
 
           {/* Instructions */}
           <div className="mt-5">
+            <h3 className="fw-bold mb-4">📋 Instructions</h3>
 
-            <h3 className="fw-bold mb-4">
-              📋 Instructions
-            </h3>
+            {/* DEBUG BUTTON - click to see raw instructions in console */}
+            <button
+              className="btn btn-sm btn-outline-secondary mb-3"
+              onClick={() => console.log('Raw instructions:', recipe.instructions)}
+            >
+              🐞 Debug Instructions
+            </button>
 
-            {instructionSteps.length > 0 ? (
-
-              instructionSteps.map((step, index) => (
-
+            {instructionSteps.map((step, index) => (
+              <div
+                key={index}
+                className="d-flex align-items-start gap-3 mb-4"
+              >
+                {/* Step Number */}
                 <div
-                  key={index}
-                  className="d-flex align-items-start gap-3 mb-4"
+                  className="d-flex align-items-center justify-content-center fw-bold"
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    minWidth: '36px',
+                    borderRadius: '50%',
+                    background: '#ff4d4d',
+                    color: '#fff'
+                  }}
                 >
-
-                  {/* Step Number */}
-                  <div
-                    className="d-flex align-items-center justify-content-center fw-bold"
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      minWidth: '36px',
-                      borderRadius: '50%',
-                      background: '#ff4d4d',
-                      color: '#fff'
-                    }}
-                  >
-                    {index + 1}
-                  </div>
-
-                  {/* Step Text */}
-                  <div
-                    style={{
-                      color: '#f1f1f1',
-                      lineHeight: '1.8',
-                      fontSize: '1rem'
-                    }}
-                  >
-                    {step}
-                  </div>
-
+                  {index + 1}
                 </div>
 
-              ))
-
-            ) : (
-
-              <p style={{ color: '#aaa' }}>
-                No instructions available.
-              </p>
-
-            )}
-
+                {/* Step Text */}
+                <div
+                  style={{
+                    color: '#f1f1f1',
+                    lineHeight: '1.8',
+                    fontSize: '1rem'
+                  }}
+                >
+                  {step}
+                </div>
+              </div>
+            ))}
           </div>
-
         </div>
       </div>
     </div>
