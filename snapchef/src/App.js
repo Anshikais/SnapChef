@@ -109,7 +109,7 @@ function Home() {
   ];
 
   const filteredRecipes = recipes.filter(recipe => {
-    if (!recipe) return false; // ✅ skip undefined items
+    if (!recipe) return false; 
     if (filter === 'All') return true;
 
     if (recipe.diet) {

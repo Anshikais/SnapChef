@@ -116,13 +116,12 @@ app.post('/recipes/match', async (req, res) => {
 
     const inputIngredients = ingredients.map(i => i.toLowerCase());
 
-    // Optimize: Fetch only recipes matching at least ONE ingredient
     const regexIngredients = inputIngredients.map(i => new RegExp(i, 'i'));
-    
+
     let query = {
       ingredients: { $in: regexIngredients }
     };
-    
+
     if (diet && diet !== 'all') {
       if (diet === 'veg') {
         query.diet = { $regex: /vegetarian/i };
@@ -131,7 +130,6 @@ app.post('/recipes/match', async (req, res) => {
       }
     }
 
-    // Optimize: Limit database load and use lean() for plain JS objects
     const recipes = await Recipe.find(query).limit(500).lean();
 
     const matchedRecipes = recipes.map(recipe => {
@@ -156,6 +154,19 @@ app.post('/recipes/match', async (req, res) => {
   } catch (error) {
     console.error('Error matching recipes:', error);
     res.status(500).json({ error: 'Server error while matching recipes' });
+  }
+});
+
+// ==============================
+// GET ALL RECIPES
+// ==============================
+app.get('/recipes/all', async (req, res) => {
+  try {
+    const recipes = await Recipe.find().limit(5);
+    res.json(recipes);
+  } catch (error) {
+    console.error('Error fetching all recipes:', error);
+    res.status(500).json({ error: 'Server error while fetching recipes' });
   }
 });
 
@@ -262,20 +273,23 @@ Format in clean Markdown with clear headings.`
         }
       ]
     });
-app.get('/recipes/all', async (req, res) => {
-  const recipes = await Recipe.find().limit(5);
-  res.json(recipes);
-});
+
     const text = response.choices[0].message.content;
     res.json({ text });
+
   } catch (error) {
     console.error('Groq API error (dish):', error);
     res.status(500).json({ error: 'Failed to generate recipe' });
   }
 });
+
+// ==============================
+// ROOT
+// ==============================
 app.get('/', (req, res) => {
   res.send('SnapChef API is running');
 });
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

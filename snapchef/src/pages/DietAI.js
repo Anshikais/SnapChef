@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
-
 export default function DietAI() {
   const [dietType, setDietType] = useState('');
   const [result, setResult] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!dietType.trim()) return;
-
     setIsLoading(true);
     setError('');
     setResult('');
-
     try {
      const response = await axios.post(
   `${process.env.REACT_APP_API_URL}/api/ai/diet` , { dietType });
@@ -27,7 +23,6 @@ export default function DietAI() {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="container py-5">
       <div className="text-center mb-5">
@@ -36,7 +31,6 @@ export default function DietAI() {
           Tell me your diet goal, and I'll create 3-5 perfect recipes for you!
         </p>
       </div>
-
       <div className="row justify-content-center">
         <div className="col-md-8">
           <div className="card shadow-sm mb-4">
@@ -60,13 +54,11 @@ export default function DietAI() {
               </form>
             </div>
           </div>
-
           {error && (
             <div className="alert alert-danger text-center">
               {error}
             </div>
           )}
-
           {isLoading && (
             <div className="text-center my-5 py-5">
               <div className="spinner-border text-primary" role="status">
@@ -75,7 +67,6 @@ export default function DietAI() {
               <p className="mt-3 text-secondary">Crafting the perfect recipes for you...</p>
             </div>
           )}
-
           {result && !isLoading && (
             <div className="card shadow-sm border-0 animate-fade-in">
               <div className="card-body p-4 p-md-5">
