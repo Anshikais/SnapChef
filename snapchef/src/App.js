@@ -57,14 +57,13 @@ function Home() {
     try {
       // Step 1: Scan image
       const scanRes = await axios.post(
-  `${process.env.REACT_APP_API_URL}/scan-image`,
-  formData
-);
+        `${process.env.REACT_APP_API_URL}/scan-image`,
+        formData
+      );
 
       const detectedIngredients = scanRes.data.ingredients || [];
       setIngredients(detectedIngredients);
 
-      // ✅ Check if no ingredients detected
       if (detectedIngredients.length === 0) {
         setError("🚫 No food ingredients detected! Please upload a fridge or food image.");
         setRecipes([]);
@@ -73,19 +72,24 @@ function Home() {
 
       // Step 2: Fetch matching recipes
       const recipeRes = await axios.post(
-  `${process.env.REACT_APP_API_URL}/recipes/match`,
-  {
-    ingredients: detectedIngredients,
-    diet: 'all'
-  }
-);
+        `${process.env.REACT_APP_API_URL}/recipes/match`,
+        {
+          ingredients: detectedIngredients,
+          diet: 'all'
+        }
+      );
 
       console.log("Recipes API response:", recipeRes.data);
 
-      sessionStorage.setItem('ingredients', JSON.stringify(detectedIngredients));
-      sessionStorage.setItem('recipes', JSON.stringify(recipeRes.data));
+      // ✅ Handle both { recipes: [...] } and [...] response shapes
+      const recipeList = Array.isArray(recipeRes.data)
+        ? recipeRes.data
+        : recipeRes.data.recipes || [];
 
-      setRecipes(recipeRes.data);
+      sessionStorage.setItem('ingredients', JSON.stringify(detectedIngredients));
+      sessionStorage.setItem('recipes', JSON.stringify(recipeList));
+
+      setRecipes(recipeList);
       setFilter('All');
 
     } catch (err) {
@@ -98,7 +102,6 @@ function Home() {
     }
   };
 
-  // Non-veg keywords for frontend filtering
   const nonVegKeywords = [
     "chicken", "beef", "pork", "lamb", "fish", "salmon", "tuna", "shrimp",
     "seafood", "meat", "bacon", "turkey", "mutton", "prawn", "crab", "lobster",
@@ -106,17 +109,16 @@ function Home() {
   ];
 
   const filteredRecipes = recipes.filter(recipe => {
+    if (!recipe) return false; // ✅ skip undefined items
     if (filter === 'All') return true;
 
-    // First check diet field from DB (more accurate)
     if (recipe.diet) {
       const dietLower = recipe.diet.toLowerCase();
       if (filter === 'Veg') return dietLower.includes('vegetarian');
       if (filter === 'Non-Veg') return !dietLower.includes('vegetarian');
     }
 
-    // Fallback: check ingredients for non-veg keywords
-    const isNonVeg = recipe.ingredients.some(ingredient => {
+    const isNonVeg = recipe.ingredients?.some(ingredient => {
       const ingredientLower = ingredient.toLowerCase();
       return nonVegKeywords.some(keyword => ingredientLower.includes(keyword));
     });
@@ -142,7 +144,6 @@ function Home() {
         isScanning={isScanning}
       />
 
-      {/* Error / No food message */}
       {error && (
         <div className="alert alert-danger mt-3 text-center">
           {error}
@@ -153,7 +154,6 @@ function Home() {
         <IngredientsList ingredients={ingredients} />
       )}
 
-      {/* Veg / Non-Veg Filter Buttons */}
       {recipes.length > 0 && (
         <div className="d-flex justify-content-center my-4 gap-3 animate-fade-in">
           <button
@@ -177,10 +177,14 @@ function Home() {
         </div>
       )}
 
-      {/* Recipe Cards */}
+      {/* ✅ Fixed: map over array and pass each recipe individually */}
       {recipes.length > 0 && (
         filteredRecipes.length > 0 ? (
-          <RecipeCards recipes={filteredRecipes} />
+          <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {filteredRecipes.map((recipe) => (
+              <RecipeCards key={recipe._id} recipe={recipe} />
+            ))}
+          </div>
         ) : (
           <div className="text-center text-muted mt-4">
             <p>No {filter} recipes found. Try a different filter! 🍽️</p>
