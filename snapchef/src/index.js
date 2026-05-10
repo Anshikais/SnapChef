@@ -14,6 +14,7 @@ if (!PUBLISHABLE_KEY) {
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+document.body.classList.add('dark-mode');
 root.render(
   <React.StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
