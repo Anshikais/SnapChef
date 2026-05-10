@@ -6,97 +6,91 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const Groq = require('groq-sdk');
+const axios = require('axios');
 const Recipe = require('./models/Recipe');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Groq AI Setup
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected to snapchef database'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Multer Setup
 const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-
 const upload = multer({ storage });
 
 // ==============================
-// SCAN IMAGE ROUTE - Groq Vision
+// PEXELS IMAGE SEARCH
+// ==============================
+app.get('/api/image/:query', async (req, res) => {
+  try {
+    const query = encodeURIComponent(req.params.query + ' food dish');
+    const response = await axios.get(
+      `https://api.pexels.com/v1/search?query=${query}&per_page=1`,
+      { headers: { Authorization: process.env.PEXELS_API_KEY } }
+    );
+    const photo = response.data.photos[0];
+    res.json({ imageUrl: photo ? photo.src.large : null });
+  } catch (err) {
+    console.error('Pexels API error:', err.message);
+    res.status(500).json({ imageUrl: null });
+  }
+});
+
+// ==============================
+// SCAN IMAGE - Groq Vision
 // ==============================
 app.post('/scan-image', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image uploaded' });
-  }
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
   try {
-    console.log('Image uploaded:', req.file.path);
-
     const imageData = fs.readFileSync(req.file.path);
     const base64Image = imageData.toString('base64');
     const mimeType = req.file.mimetype;
 
     const response = await groq.chat.completions.create({
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `You are a food ingredient detector. 
-Look at this image carefully.
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `You are a food ingredient detector. Look at this image carefully.
 If you see any food items, ingredients, vegetables, fruits, meat, dairy, or grocery items, list them all.
 Return ONLY a JSON array of ingredient names in lowercase, nothing else, no explanation.
 Example: ["tomatoes", "onion", "garlic", "eggs", "milk"]
-If you see absolutely no food items, return: []
-Be generous - even if partially visible, include it.`
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:${mimeType};base64,${base64Image}` }
-            }
-          ]
-        }
-      ]
+If you see absolutely no food items, return: []`
+          },
+          {
+            type: 'image_url',
+            image_url: { url: `data:${mimeType};base64,${base64Image}` }
+          }
+        ]
+      }]
     });
 
     const responseText = response.choices[0].message.content.trim();
-    console.log('Groq response:', responseText);
-
     let detectedIngredients = [];
     try {
-      const cleaned = responseText
-        .replace(/```json/g, '')
-        .replace(/```/g, '')
-        .trim();
+      const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
       detectedIngredients = JSON.parse(cleaned);
-      if (!Array.isArray(detectedIngredients)) {
-        detectedIngredients = [];
-      }
-    } catch (parseErr) {
-      console.error('Error parsing Groq response:', parseErr);
+      if (!Array.isArray(detectedIngredients)) detectedIngredients = [];
+    } catch {
       detectedIngredients = [];
     }
 
-    console.log('Detected ingredients:', detectedIngredients);
     res.json({ message: 'Image scanned successfully', ingredients: detectedIngredients });
-
   } catch (error) {
     console.error('Groq API error:', error);
     res.status(500).json({ error: 'Failed to scan image' });
@@ -104,41 +98,29 @@ Be generous - even if partially visible, include it.`
 });
 
 // ==============================
-// MATCH RECIPES ROUTE
+// MATCH RECIPES
 // ==============================
 app.post('/recipes/match', async (req, res) => {
   try {
     const { ingredients, diet } = req.body;
-
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0)
       return res.status(400).json({ error: 'Provide ingredients array' });
-    }
 
     const inputIngredients = ingredients.map(i => i.toLowerCase());
-
     const regexIngredients = inputIngredients.map(i => new RegExp(i, 'i'));
-
-    let query = {
-      ingredients: { $in: regexIngredients }
-    };
+    let query = { ingredients: { $in: regexIngredients } };
 
     if (diet && diet !== 'all') {
-      if (diet === 'veg') {
-        query.diet = { $regex: /vegetarian/i };
-      } else if (diet === 'nonveg') {
-        query.diet = { $not: /vegetarian/i };
-      }
+      if (diet === 'veg') query.diet = { $regex: /vegetarian/i };
+      else if (diet === 'nonveg') query.diet = { $not: /vegetarian/i };
     }
 
     const recipes = await Recipe.find(query).limit(500).lean();
-
     const matchedRecipes = recipes.map(recipe => {
       let matchCount = 0;
-      if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+      if (Array.isArray(recipe.ingredients)) {
         recipe.ingredients.forEach(ing => {
-          if (inputIngredients.some(i => ing.includes(i))) {
-            matchCount++;
-          }
+          if (inputIngredients.some(i => ing.includes(i))) matchCount++;
         });
       }
       return { ...recipe, matchCount };
@@ -150,7 +132,6 @@ app.post('/recipes/match', async (req, res) => {
       .slice(0, 12);
 
     res.json(result);
-
   } catch (error) {
     console.error('Error matching recipes:', error);
     res.status(500).json({ error: 'Server error while matching recipes' });
@@ -165,51 +146,41 @@ app.get('/recipes/all', async (req, res) => {
     const recipes = await Recipe.find().limit(5);
     res.json(recipes);
   } catch (error) {
-    console.error('Error fetching all recipes:', error);
     res.status(500).json({ error: 'Server error while fetching recipes' });
   }
 });
 
 // ==============================
-// GET RECIPE DETAILS
+// GET RECIPE BY ID
 // ==============================
 app.get('/recipes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id))
       return res.status(400).json({ error: 'Invalid recipe ID' });
-    }
 
     const recipe = await Recipe.findById(id);
-    if (!recipe) {
-      return res.status(404).json({ error: 'Recipe not found' });
-    }
+    if (!recipe) return res.status(404).json({ error: 'Recipe not found' });
 
     res.json(recipe);
-
   } catch (error) {
-    console.error('Error fetching recipe:', error);
     res.status(500).json({ error: 'Server error while fetching recipe' });
   }
 });
 
 // ==============================
-// AI DIET RECIPES ROUTE
+// AI DIET RECIPES
 // ==============================
 app.post('/api/ai/diet', async (req, res) => {
   try {
     const { dietType } = req.body;
-    if (!dietType) {
-      return res.status(400).json({ error: 'Diet type is required' });
-    }
+    if (!dietType) return res.status(400).json({ error: 'Diet type is required' });
 
     const response = await groq.chat.completions.create({
-     model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'user',
-          content: `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
+      model: 'llama-3.3-70b-versatile',
+      messages: [{
+        role: 'user',
+        content: `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
 Suggest 3-5 recipes that match their diet goal.
 
 For each recipe, provide:
@@ -217,27 +188,20 @@ For each recipe, provide:
 - Ingredients with exact quantities
 - Step-by-step cooking instructions
 - Complete nutritional breakdown per serving:
-  * Calories
-  * Protein (g)
-  * Carbohydrates (g)
-  * Fats (g)
-  * Fiber (g)
+  * Calories, Protein (g), Carbohydrates (g), Fats (g), Fiber (g)
   * Key vitamins (Vitamin A, B12, C, D, E) in mg/mcg
   * Key minerals (Iron, Calcium, Potassium) in mg
 
 Also mention:
 - Who this recipe is best suited for
 - What health benefits it provides
-- Any ingredients to avoid for specific conditions (e.g., diabetes, hypertension)
+- Any ingredients to avoid for specific conditions
 
 Format the response in clean Markdown with clear headings.`
-        }
-      ]
+      }]
     });
 
-    const text = response.choices[0].message.content;
-    res.json({ text });
-
+    res.json({ text: response.choices[0].message.content });
   } catch (error) {
     console.error('Groq API error (diet):', error);
     res.status(500).json({ error: 'Failed to generate recipes' });
@@ -245,21 +209,18 @@ Format the response in clean Markdown with clear headings.`
 });
 
 // ==============================
-// AI DISH RECIPE ROUTE
+// AI DISH RECIPE
 // ==============================
 app.post('/api/ai/dish', async (req, res) => {
   try {
     const { dishName } = req.body;
-    if (!dishName) {
-      return res.status(400).json({ error: 'Dish name is required' });
-    }
+    if (!dishName) return res.status(400).json({ error: 'Dish name is required' });
 
     const response = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'user',
-          content: `You are an expert chef and culinary assistant. The user wants to make: ${dishName}.
+      model: 'llama-3.3-70b-versatile',
+      messages: [{
+        role: 'user',
+        content: `You are an expert chef and culinary assistant. The user wants to make: ${dishName}.
 
 Respond with:
 1. **Ingredients List** (with exact measurements for 2 servings)
@@ -270,26 +231,16 @@ Respond with:
 6. **Variations** (eggless, gluten-free, healthier version)
 
 Format in clean Markdown with clear headings.`
-        }
-      ]
+      }]
     });
 
-    const text = response.choices[0].message.content;
-    res.json({ text });
-
+    res.json({ text: response.choices[0].message.content });
   } catch (error) {
     console.error('Groq API error (dish):', error);
     res.status(500).json({ error: 'Failed to generate recipe' });
   }
 });
 
-// ==============================
-// ROOT
-// ==============================
-app.get('/', (req, res) => {
-  res.send('SnapChef API is running');
-});
+app.get('/', (req, res) => res.send('SnapChef API is running'));
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
