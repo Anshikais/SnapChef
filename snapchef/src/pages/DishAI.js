@@ -17,7 +17,8 @@ export default function DishAI() {
     setResult('');
 
     try {
-      const response = await axios.post('http://localhost:5001/api/ai/dish', { dishName });
+     const response = await axios.post(
+  `${process.env.REACT_APP_API_URL}/api/ai/dish`, { dishName });
       setResult(response.data.text);
     } catch (err) {
       console.error(err);
