@@ -1,19 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function RecipeCards({ recipe }) {
+export default function RecipeCards({ recipe, index = 0 }) {
 
   const navigate = useNavigate();
 
-  // Guard against undefined recipe
   if (!recipe) return null;
 
-  // Dynamic Image
+  // Unique image per card using recipe _id or index as sig
+  const keyword = encodeURIComponent(recipe.cuisine || recipe.category || recipe.title || 'food');
+  const sig = recipe._id || index;
   const imageUrl =
     recipe.imageUrl ||
-    `https://source.unsplash.com/600x400/?${encodeURIComponent(
-      recipe.cuisine || recipe.category || 'food'
-    )}`;
+    `https://source.unsplash.com/600x400/?${keyword}&sig=${sig}`;
 
   return (
     <div className="col">
@@ -120,9 +119,9 @@ export default function RecipeCards({ recipe }) {
               <>
                 {recipe.ingredients
                   .slice(0, 5)
-                  .map((item, index) => (
+                  .map((item, idx) => (
                     <span
-                      key={index}
+                      key={idx}
                       className="badge rounded-pill"
                       style={{
                         background: '#333',
