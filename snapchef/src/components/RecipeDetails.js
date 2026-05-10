@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 
 export default function RecipeDetails() {
   const { id } = useParams();
@@ -9,6 +10,8 @@ export default function RecipeDetails() {
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [aiInstructions, setAiInstructions] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const fetchRecipe = async () => {
@@ -28,6 +31,41 @@ export default function RecipeDetails() {
 
     fetchRecipe();
   }, [id]);
+
+  useEffect(() => {
+    if (!recipe) return;
+
+    let steps = [];
+    if (recipe.instructions) {
+      if (Array.isArray(recipe.instructions)) {
+        steps = recipe.instructions.flatMap(item => {
+          if (typeof item === 'string') {
+            return item.split(/[|\n]/).map(s => s.trim()).filter(Boolean);
+          }
+          return [];
+        });
+      } else if (typeof recipe.instructions === 'string') {
+        steps = recipe.instructions.split(/[|\n]/).map(step => step.trim()).filter(Boolean);
+      }
+    }
+
+    if (steps.length === 0) {
+      const fetchAiInstructions = async () => {
+        setAiLoading(true);
+        try {
+          const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/ai/dish`, {
+            dishName: recipe.title
+          });
+          setAiInstructions(response.data.text);
+        } catch (err) {
+          console.error('AI Instructions error:', err);
+        } finally {
+          setAiLoading(false);
+        }
+      };
+      fetchAiInstructions();
+    }
+  }, [recipe]);
 
   // Loading State
   if (loading) {
@@ -63,11 +101,13 @@ export default function RecipeDetails() {
   // -----------------------------
   const imageUrl =
     recipe.imageUrl ||
-    (recipe.title
-      ? `https://source.unsplash.com/600x400/?${encodeURIComponent(
-          recipe.title + ' food'
-        )}`
-      : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600');
+    `https://images.unsplash.com/photo-${
+      ['1504674900247-0877df9cc836','1546069901-ba9599a7e63c',
+       '1567620905732-2d1ec7ab7445','1565299624946-b28f40a0ae38',
+       '1540189549336-e6e99eb4b400','1512621776951-a57141f2eefd',
+       '1498837167922-ddd27525d352','1473093226795-af9932fe5856']
+      [Math.abs(recipe._id?.split('').reduce((a,c)=>a+c.charCodeAt(0),0) || 0) % 8]
+    }?w=600&auto=format&fit=crop`;
 
   // -----------------------------
   // FIXED: ROBUST INSTRUCTION PARSING
@@ -256,38 +296,59 @@ export default function RecipeDetails() {
               🐞 Debug Instructions
             </button>
 
-            {instructionSteps.map((step, index) => (
-              <div
-                key={index}
-                className="d-flex align-items-start gap-3 mb-4"
-              >
-                {/* Step Number */}
-                <div
-                  className="d-flex align-items-center justify-content-center fw-bold"
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    minWidth: '36px',
-                    borderRadius: '50%',
-                    background: '#ff4d4d',
-                    color: '#fff'
-                  }}
-                >
-                  {index + 1}
+            {aiLoading ? (
+              <div className="d-flex align-items-center gap-3">
+                <div className="spinner-border text-danger spinner-border-sm" role="status">
+                  <span className="visually-hidden">Loading AI instructions...</span>
                 </div>
-
-                {/* Step Text */}
-                <div
-                  style={{
-                    color: '#f1f1f1',
-                    lineHeight: '1.8',
-                    fontSize: '1rem'
-                  }}
-                >
-                  {step}
-                </div>
+                <span style={{ color: '#aaa' }}>Generating AI recipe instructions...</span>
               </div>
-            ))}
+            ) : aiInstructions ? (
+              <div
+                style={{
+                  background: '#1a1a1a',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  color: '#f1f1f1',
+                  lineHeight: '1.8'
+                }}
+              >
+                <ReactMarkdown>{aiInstructions}</ReactMarkdown>
+              </div>
+            ) : (
+              instructionSteps.map((step, index) => (
+                <div
+                  key={index}
+                  className="d-flex align-items-start gap-3 mb-4"
+                >
+                  {/* Step Number */}
+                  <div
+                    className="d-flex align-items-center justify-content-center fw-bold"
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      minWidth: '36px',
+                      borderRadius: '50%',
+                      background: '#ff4d4d',
+                      color: '#fff'
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+
+                  {/* Step Text */}
+                  <div
+                    style={{
+                      color: '#f1f1f1',
+                      lineHeight: '1.8',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    {step}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
