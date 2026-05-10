@@ -293,7 +293,6 @@ export default function RecipeDetails() {
               className="btn btn-sm btn-outline-secondary mb-3"
               onClick={() => console.log('Raw instructions:', recipe.instructions)}
             >
-              🐞 Debug Instructions
             </button>
 
             {aiLoading ? (

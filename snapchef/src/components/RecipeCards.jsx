@@ -1,18 +1,35 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const FOOD_PHOTOS = [
+  '1504674900247-0877df9cc836',
+  '1546069901-ba9599a7e63c',
+  '1567620905732-2d1ec7ab7445',
+  '1565299624946-b28f40a0ae38',
+  '1540189549336-e6e99eb4b400',
+  '1512621776951-a57141f2eefd',
+  '1498837167922-ddd27525d352',
+  '1473093226795-af9932fe5856',
+  '1555939594-58d7cb561bd1',
+  '1484723091739-30f6f3a88987',
+  '1414235077428-338989a2e8c0',
+  '1476224203421-9ac39bcb3b21',
+];
+
 export default function RecipeCards({ recipe, index = 0 }) {
 
   const navigate = useNavigate();
 
   if (!recipe) return null;
 
-  // Unique image per card using recipe _id or index as sig
-  const keyword = encodeURIComponent(recipe.cuisine || recipe.category || recipe.title || 'food');
-  const sig = recipe._id || index;
+  // Use last 4 chars of _id (the unique part) or fallback to index
+  const idSuffix = recipe._id ? recipe._id.slice(-4) : String(index);
+  const idSum = idSuffix.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const photoId = FOOD_PHOTOS[idSum % FOOD_PHOTOS.length];
+
   const imageUrl =
     recipe.imageUrl ||
-    `https://source.unsplash.com/600x400/?${keyword}&sig=${sig}`;
+    `https://images.unsplash.com/photo-${photoId}?w=600&auto=format&fit=crop`;
 
   return (
     <div className="col">
