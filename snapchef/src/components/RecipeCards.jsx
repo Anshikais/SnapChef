@@ -5,6 +5,9 @@ export default function RecipeCards({ recipe }) {
 
   const navigate = useNavigate();
 
+  // Guard against undefined recipe
+  if (!recipe) return null;
+
   // Dynamic Image
   const imageUrl =
     recipe.imageUrl ||
@@ -13,9 +16,7 @@ export default function RecipeCards({ recipe }) {
     )}`;
 
   return (
-
     <div className="col">
-
       <div
         className="card h-100 border-0 shadow-lg"
         style={{
@@ -120,7 +121,6 @@ export default function RecipeCards({ recipe }) {
                 {recipe.ingredients
                   .slice(0, 5)
                   .map((item, index) => (
-
                     <span
                       key={index}
                       className="badge rounded-pill"
@@ -129,17 +129,14 @@ export default function RecipeCards({ recipe }) {
                         color: '#fff',
                         padding: '10px 14px',
                         fontSize: '0.85rem',
-                        border:
-                          '1px solid rgba(255,255,255,0.15)'
+                        border: '1px solid rgba(255,255,255,0.15)'
                       }}
                     >
                       {item}
                     </span>
-
                   ))}
 
                 {recipe.ingredients.length > 5 && (
-
                   <span
                     className="badge rounded-pill"
                     style={{
@@ -150,16 +147,13 @@ export default function RecipeCards({ recipe }) {
                   >
                     +{recipe.ingredients.length - 5} more
                   </span>
-
                 )}
               </>
 
             ) : (
-
               <span style={{ color: '#aaa' }}>
                 No ingredients available
               </span>
-
             )}
 
           </div>
