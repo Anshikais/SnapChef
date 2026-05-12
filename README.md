@@ -1,39 +1,90 @@
 # SnapChef 🍳
+SnapChef is an AI-powered recipe recommendation web application that helps users discover recipes using ingredients, food images, cuisines, and diet preferences.
 
-SnapChef is a smart recipe and food discovery application that helps users explore delicious recipes quickly and easily. Users can browse meals, search recipes, and view ingredients with cooking instructions in a simple and user-friendly interface.
+## 🚀 Features
 
----
-
-## Features ✨
-
-- Search recipes instantly
-- View ingredients and cooking steps
-- Clean and responsive UI
-- Food categories and meal suggestions
-- Easy navigation
-- Fast recipe discovery
-
----
-
-## Technologies Used 💻
-
-- HTML5
-- Tailwind CSS
-- JavaScript
-- React
-- API Integration
+* Upload food/ingredient images
+* AI ingredient detection
+* Smart recipe matching
+* Recipe details with instructions
+* Dynamic recipe images
+* Cuisine & diet filters
+* YouTube recipe video support
+* Responsive dark UI
+* MongoDB recipe database
 
 ---
 
-## Project Purpose 🎯
+## 🛠️ Tech Stack
 
-The purpose of SnapChef is to make cooking easier by helping users discover recipes quickly and efficiently through a modern web application.
+### Frontend
+
+* React.js
+* React Router
+* Bootstrap
+* Axios
+
+### Backend
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+
+### AI/API
+
+* Groq API
+* Image pixel analysis
+* AI ingredient extraction
 
 ---
 
-## Installation 🚀
-
-Clone the repository:
+## 📂 Project Structure
 
 ```bash
-git clone https://github.com/Anshikais/snapchef.git
+snapchef/
+│
+├── backend/
+│   ├── models/
+│   ├── routes/
+│   ├── seedRecipe.js
+│   ├── server.js
+│   └── .env
+│
+├── snapchef/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── App.js
+│   │   └── index.js
+│
+└── README.md
+```
+
+---
+
+
+## 🌐 Deployment
+
+* Frontend: Vercel
+* Backend: Render
+* Database: MongoDB Atlas
+
+---
+
+## 🔥 Future Improvements
+
+* AI nutrition analysis
+* Meal planning
+* Recipe bookmarking
+* User authentication
+* Personalized recommendations
+
+---
+
+## 👩‍💻 Author
+
+Anshika Parmar
+
+---
