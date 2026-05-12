@@ -67,17 +67,7 @@ snapchef/
 
 * Frontend: Vercel
 * Backend: Render
-* Database: MongoDB Atlas
-
----
-
-## 🔥 Future Improvements
-
-* AI nutrition analysis
-* Meal planning
-* Recipe bookmarking
-* User authentication
-* Personalized recommendations
+* Database: MongoDB
 
 ---
 
