@@ -10,7 +10,6 @@ SnapChef is an AI-powered recipe recommendation web application that helps users
 * Dynamic recipe images
 * Cuisine & diet filters
 * YouTube recipe video support
-* Responsive dark UI
 * MongoDB recipe database
 
 ---
@@ -22,7 +21,6 @@ SnapChef is an AI-powered recipe recommendation web application that helps users
 * React.js
 * React Router
 * Bootstrap
-* Axios
 
 ### Backend
 
