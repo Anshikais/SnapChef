@@ -2,8 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const multer = require('multer');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('./config/cloudinary');
 require('dotenv').config();
 const Groq = require('groq-sdk');
 const axios = require('axios');
@@ -20,14 +20,14 @@ app.use(express.json());
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected to snapchef database'))
   .catch(err => console.error('MongoDB connection error:', err));
-
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+  const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'snapchef',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+  }
 });
+
 const upload = multer({ storage });
 
 // ==============================
@@ -55,10 +55,6 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
 
   try {
-    const imageData = fs.readFileSync(req.file.path);
-    const base64Image = imageData.toString('base64');
-    const mimeType = req.file.mimetype;
-
     const response = await groq.chat.completions.create({
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
@@ -74,7 +70,7 @@ If you see absolutely no food items, return: []`
           },
           {
             type: 'image_url',
-            image_url: { url: `data:${mimeType};base64,${base64Image}` }
+            image_url: { url: req.file.path } 
           }
         ]
       }]
