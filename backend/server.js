@@ -8,6 +8,7 @@ require('dotenv').config();
 const Groq = require('groq-sdk');
 const axios = require('axios');
 const Recipe = require('./models/Recipe');
+const ScanHistory = require('./models/ScanHistory');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -85,7 +86,11 @@ If you see absolutely no food items, return: []`
     } catch {
       detectedIngredients = [];
     }
-
+await ScanHistory.create({
+  clerkUserId: req.body.clerkUserId,
+  imageUrl: req.file.path,
+  ingredients: detectedIngredients
+});
     res.json({ message: 'Image scanned successfully', ingredients: detectedIngredients });
   } catch (error) {
     console.error('Groq API error:', error);

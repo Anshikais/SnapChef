@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useUser } from "@clerk/clerk-react";
 import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -13,6 +14,7 @@ import DishAI from './pages/DishAI';
 import './App.css';
 
 function Home() {
+  const { user } = useUser();
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -52,7 +54,8 @@ function Home() {
     setError(null);
 
     const formData = new FormData();
-    formData.append('image', selectedFile);
+formData.append('image', selectedFile);
+formData.append('clerkUserId', user.id);
 
     try {
       // Step 1: Scan image
