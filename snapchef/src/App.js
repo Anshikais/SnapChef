@@ -13,6 +13,25 @@ import DietAI from './pages/DietAI';
 import DishAI from './pages/DishAI';
 import './App.css';
 
+const getMealType = () => {
+  const hour = new Date().getHours(); // local time
+  let mealType;
+
+  if (hour >= 5 && hour < 11) {
+    mealType = "Breakfast";
+  } else if (hour >= 11 && hour < 16) {
+    mealType = "Lunch";
+  } else if (hour >= 16 && hour < 22) {
+    mealType = "Dinner";
+  } else {
+    mealType = "Snacks";
+  }
+
+  console.log("Current Hour:", hour);
+  console.log("Detected Meal:", mealType);
+  return mealType;
+};
+
 function Home() {
   const { user } = useUser();
   const [imagePreview, setImagePreview] = useState(null);
@@ -78,7 +97,8 @@ function Home() {
     if (!user) return;
     setSuggestionsLoading(true);
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/food/suggestions/${user.id}`);
+      const localHour = new Date().getHours();
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/food/suggestions/${user.id}?hour=${localHour}`);
       setTimeSuggestions(res.data.suggestions || []);
     } catch (err) {
       console.error(err);
@@ -115,9 +135,11 @@ function Home() {
     setError(null);
     setAiSuggestions(null);
 
+    const detectedMealType = getMealType();
     const formData = new FormData();
     formData.append('image', selectedFile);
     formData.append('clerkUserId', user.id);
+    formData.append('mealType', detectedMealType);
 
     try {
       // Step 1: Scan image and save memory
@@ -235,7 +257,7 @@ function Home() {
                 {mealType === 'Breakfast' && '🌅 Breakfast'}
                 {mealType === 'Lunch' && '🥦 Lunch'}
                 {mealType === 'Dinner' && '🍗 Dinner'}
-                {mealType === 'Snack' && '🍕 Snack'}
+                {(mealType === 'Snacks' || mealType === 'Snack') && '🍕 Snacks'}
               </span>
             )}
             {detectedFoodName && (

@@ -257,12 +257,22 @@ function hammingDistance(hash1, hash2) {
   return diffs;
 }
 
-function getMealType() {
-  const hours = new Date().getHours();
-  if (hours >= 5 && hours < 11) return 'Breakfast';
-  if (hours >= 11 && hours < 16) return 'Lunch';
-  if (hours >= 17 && hours < 22) return 'Dinner';
-  return 'Snack';
+function getMealType(customHour) {
+  const hour = customHour !== undefined ? customHour : new Date().getHours();
+
+  if (hour >= 5 && hour < 11) {
+    return "Breakfast";
+  }
+
+  if (hour >= 11 && hour < 16) {
+    return "Lunch";
+  }
+
+  if (hour >= 16 && hour < 22) {
+    return "Dinner";
+  }
+
+  return "Snacks";
 }
 
 // ==============================
@@ -272,7 +282,7 @@ function getMealType() {
 // 1. Upload food image, analyze ingredients/duplicate/meal type, generate AI recommendations
 app.post('/api/food/upload', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
-  const { clerkUserId } = req.body;
+  const { clerkUserId, mealType: clientMealType } = req.body;
   if (!clerkUserId) return res.status(400).json({ error: 'Provide clerkUserId' });
 
   try {
@@ -332,7 +342,7 @@ Return ONLY the JSON, no explanation, no markdown formatting.`
     });
 
     // D. Time-based Meal Type Detection
-    const mealType = getMealType();
+    const mealType = clientMealType || getMealType();
 
     // E. Duplicate Detection (Similarity > 85%)
     const previousUploads = await FoodMemory.find({ userId: clerkUserId }).sort({ uploadTime: -1 });
@@ -368,7 +378,7 @@ Return ONLY the JSON, no explanation, no markdown formatting.`
     };
 
     try {
-      const recPrompt = `The user scanned a food item: "${foodName}".
+      const recPrompt = `User uploaded ${foodName} during ${mealType} time. Suggest healthy ${mealType.toLowerCase()} ideas instead of other meal recipes.
 Ingredients detected: ${JSON.stringify(detectedIngredients)}.
 Please generate personalized recommendations.
 Provide:
@@ -475,8 +485,9 @@ app.get('/api/food/history/:userId', async (req, res) => {
 app.get('/api/food/suggestions/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
+    const { hour } = req.query;
     const history = await FoodMemory.find({ userId }).sort({ uploadTime: -1 }).limit(10);
-    const mealType = getMealType();
+    const mealType = getMealType(hour !== undefined ? parseInt(hour, 10) : undefined);
     const historySummary = history.map(h => `${h.foodName} (${h.mealType})`).join(', ');
 
     const prompt = `You are a personalized nutritionist. The user's current meal time is for: ${mealType}.
