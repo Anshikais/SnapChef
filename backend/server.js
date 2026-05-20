@@ -9,6 +9,8 @@ const Groq = require('groq-sdk');
 const axios = require('axios');
 const Recipe = require('./models/Recipe');
 const ScanHistory = require('./models/ScanHistory');
+const Jimp = require('jimp');
+const FoodMemory = require('./models/FoodMemory');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -239,6 +241,323 @@ Format in clean Markdown with clear headings.`
   } catch (error) {
     console.error('Groq API error (dish):', error);
     res.status(500).json({ error: 'Failed to generate recipe' });
+  }
+});
+
+// ==============================
+// HELPERS FOR FOOD INTELLIGENCE
+// ==============================
+function hammingDistance(hash1, hash2) {
+  let diffs = 0;
+  for (let i = 0; i < hash1.length; i++) {
+    if (hash1[i] !== hash2[i]) {
+      diffs++;
+    }
+  }
+  return diffs;
+}
+
+function getMealType() {
+  const hours = new Date().getHours();
+  if (hours >= 5 && hours < 11) return 'Breakfast';
+  if (hours >= 11 && hours < 16) return 'Lunch';
+  if (hours >= 17 && hours < 22) return 'Dinner';
+  return 'Snack';
+}
+
+// ==============================
+// FOOD INTELLIGENCE ENDPOINTS
+// ==============================
+
+// 1. Upload food image, analyze ingredients/duplicate/meal type, generate AI recommendations
+app.post('/api/food/upload', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
+  const { clerkUserId } = req.body;
+  if (!clerkUserId) return res.status(400).json({ error: 'Provide clerkUserId' });
+
+  try {
+    const imageUrl = req.file.path;
+
+    // A. Perceptual hashing using Jimp
+    let imageHash = '';
+    try {
+      const jimpImg = await Jimp.read(imageUrl);
+      imageHash = jimpImg.hash(2); // 64-bit binary string
+    } catch (jimpError) {
+      console.error('Jimp error generating hash:', jimpError.message);
+    }
+
+    // B. Call Groq Vision to identify food name and ingredients
+    let detectedIngredients = [];
+    let foodName = 'food';
+
+    const visionResponse = await groq.chat.completions.create({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Look at this food image carefully.
+Return a JSON object with exactly two keys:
+- "foodName": a short name of the food item or dish (e.g. "apple", "sandwich", "pizza", "chicken curry")
+- "ingredients": a JSON array of detected ingredient names in lowercase (e.g. ["tomato", "cheese"])
+Return ONLY the JSON, no explanation, no markdown formatting.`
+          },
+          {
+            type: 'image_url',
+            image_url: { url: imageUrl }
+          }
+        ]
+      }]
+    });
+
+    const visionText = visionResponse.choices[0].message.content.trim();
+    try {
+      const cleaned = visionText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      detectedIngredients = parsed.ingredients || [];
+      foodName = parsed.foodName || 'food';
+    } catch (parseError) {
+      console.error('Groq Vision parse error:', parseError, visionText);
+      detectedIngredients = [];
+      foodName = 'food';
+    }
+
+    // C. Save to ScanHistory
+    await ScanHistory.create({
+      clerkUserId,
+      imageUrl,
+      ingredients: detectedIngredients
+    });
+
+    // D. Time-based Meal Type Detection
+    const mealType = getMealType();
+
+    // E. Duplicate Detection (Similarity > 85%)
+    const previousUploads = await FoodMemory.find({ userId: clerkUserId }).sort({ uploadTime: -1 });
+
+    let duplicateDetected = false;
+    let similarityScore = 0;
+    let duplicateInfo = null;
+
+    if (imageHash && previousUploads.length > 0) {
+      for (const prev of previousUploads) {
+        if (prev.imageHash) {
+          const dist = hammingDistance(imageHash, prev.imageHash);
+          const similarity = (imageHash.length - dist) / imageHash.length;
+          if (similarity > 0.85 && similarity > similarityScore) {
+            similarityScore = similarity;
+            duplicateDetected = true;
+            duplicateInfo = {
+              previousUploadDate: prev.uploadTime,
+              previousMealType: prev.mealType,
+              foodName: prev.foodName
+            };
+          }
+        }
+      }
+    }
+
+    // F. Generate AI Recommendations using Groq Chat
+    let aiRecs = {
+      recipes: [],
+      healthierAlternatives: [],
+      complementaryFoods: [],
+      nutritionTips: []
+    };
+
+    try {
+      const recPrompt = `The user scanned a food item: "${foodName}".
+Ingredients detected: ${JSON.stringify(detectedIngredients)}.
+Please generate personalized recommendations.
+Provide:
+1. recipes: 2-3 names of dishes that can be made using these ingredients.
+2. healthierAlternatives: 2-3 healthier options/substitutes if this food is generally unhealthy, or healthy modifications.
+3. complementaryFoods: 2-3 side dishes, drinks, or foods that pair well with this.
+4. nutritionTips: 2-3 quick nutritional facts or benefits about this food.
+
+Return the suggestions in raw JSON format matching this schema:
+{
+  "recipes": ["Recipe 1 Name", "Recipe 2 Name"],
+  "healthierAlternatives": ["Alternative 1", "Alternative 2"],
+  "complementaryFoods": ["Partner Food 1", "Partner Food 2"],
+  "nutritionTips": ["Tip 1", "Tip 2"]
+}
+Do not include any explanation or markdown markup. Return ONLY JSON.`;
+
+      const chatResponse = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: recPrompt }]
+      });
+
+      const recText = chatResponse.choices[0].message.content.trim();
+      const cleanedRec = recText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedRec = JSON.parse(cleanedRec);
+      aiRecs = {
+        recipes: parsedRec.recipes || [],
+        healthierAlternatives: parsedRec.healthierAlternatives || [],
+        complementaryFoods: parsedRec.complementaryFoods || [],
+        nutritionTips: parsedRec.nutritionTips || []
+      };
+    } catch (recError) {
+      console.error('Error generating recommendations:', recError);
+    }
+
+    // G. Store in User Food Memory
+    const newMemory = await FoodMemory.create({
+      userId: clerkUserId,
+      imageUrl,
+      foodName,
+      mealType,
+      aiSuggestions: {
+        recipes: aiRecs.recipes,
+        healthierAlternatives: aiRecs.healthierAlternatives,
+        complementaryFoods: aiRecs.complementaryFoods,
+        nutritionTips: aiRecs.nutritionTips
+      },
+      similarityScore,
+      imageHash
+    });
+
+    res.json({
+      message: 'Image scanned successfully',
+      ingredients: detectedIngredients,
+      foodName,
+      mealType,
+      aiSuggestions: aiRecs,
+      duplicateDetected,
+      similarityScore,
+      duplicateInfo,
+      foodMemory: newMemory
+    });
+
+  } catch (error) {
+    console.error('Error in /api/food/upload:', error);
+    res.status(500).json({ error: 'Failed to upload and analyze food' });
+  }
+});
+
+// 2. Compare two images for duplicate check
+app.post('/api/food/compare', async (req, res) => {
+  const { image1Url, image2Url } = req.body;
+  if (!image1Url || !image2Url) {
+    return res.status(400).json({ error: 'Please provide both image1Url and image2Url' });
+  }
+
+  try {
+    const img1 = await Jimp.read(image1Url);
+    const img2 = await Jimp.read(image2Url);
+    const hash1 = img1.hash(2);
+    const hash2 = img2.hash(2);
+    const dist = hammingDistance(hash1, hash2);
+    const similarity = (hash1.length - dist) / hash1.length;
+    res.json({ similarity, duplicate: similarity > 0.85 });
+  } catch (error) {
+    console.error('Error in /api/food/compare:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Get user food memory history
+app.get('/api/food/history/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const history = await FoodMemory.find({ userId }).sort({ uploadTime: -1 });
+    res.json(history);
+  } catch (error) {
+    console.error('Error in /api/food/history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4. Get time-based suggestions
+app.get('/api/food/suggestions/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const history = await FoodMemory.find({ userId }).sort({ uploadTime: -1 }).limit(10);
+    const mealType = getMealType();
+    const historySummary = history.map(h => `${h.foodName} (${h.mealType})`).join(', ');
+
+    const prompt = `You are a personalized nutritionist. The user's current meal time is for: ${mealType}.
+The user has recently eaten: ${historySummary || 'nothing recorded yet'}.
+Please suggest 3 specific food or meal suggestions suitable for ${mealType}.
+Provide suggestions that:
+- Guide them to healthier choices based on what they've eaten.
+- If they have eaten morning fruit, suggest smoothie or oats.
+- If they have eaten bread at night, suggest healthier dinner suggestions.
+Return the suggestions in raw JSON format matching this schema:
+{
+  "suggestions": [
+    {
+      "name": "Suggestion Name",
+      "reason": "Reason why this is suggested."
+    }
+  ]
+}
+Do not include any explanation or markdown formatting. Return ONLY JSON.`;
+
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const text = response.choices[0].message.content.trim();
+    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    res.json(parsed);
+  } catch (error) {
+    console.error('Error in /api/food/suggestions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. Get personalized food insights
+app.get('/api/food/insights/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const history = await FoodMemory.find({ userId });
+    if (history.length === 0) {
+      return res.json({
+        repeatedFoods: [],
+        patterns: ["No food history recorded yet. Start scanning your meals to get insights!"],
+        missingNutrients: ["Insights will appear after you scan some meals."],
+        favoriteFoods: []
+      });
+    }
+
+    const historySummary = history.map(h => `${h.foodName} (${h.mealType})`).join(', ');
+
+    const prompt = `You are a personalized nutrition AI. Analyze the following food history of a user:
+[${historySummary}]
+
+Please generate insights regarding:
+1. Repeated foods
+2. Healthy/unhealthy patterns
+3. Missing nutrients
+4. Favorite foods
+
+Format your response in raw JSON matching this schema:
+{
+  "repeatedFoods": ["Food Item 1 (X times)", "Food Item 2 (Y times)"],
+  "patterns": ["Insight pattern 1", "Insight pattern 2"],
+  "missingNutrients": ["Nutrient 1 (source food recommendation)", "Nutrient 2"],
+  "favoriteFoods": ["Favorite 1", "Favorite 2"]
+}
+Do not include any explanation or markdown formatting. Return ONLY JSON.`;
+
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const text = response.choices[0].message.content.trim();
+    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+    res.json(parsed);
+  } catch (error) {
+    console.error('Error in /api/food/insights:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

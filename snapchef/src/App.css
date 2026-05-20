@@ -282,3 +282,121 @@ body.dark-mode .custom-ing-badge {
 .recipe-card:hover .recipe-card-img {
   transform: scale(1.08);
 }
+
+/* --- Modal Overlay & Content --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content-custom {
+  background-color: #1a1a1a;
+  border: 1.5px solid #333333;
+  border-radius: 1.5rem;
+  padding: 2.5rem;
+  max-width: 520px;
+  width: 90%;
+  color: white;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  animation: fadeIn 0.3s ease;
+  text-align: center;
+}
+
+body.dark-mode .modal-content-custom {
+  background-color: #161616;
+}
+
+/* --- Collapsible Food Intelligence Section --- */
+.intelligence-card {
+  background-color: #181818;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+body:not(.dark-mode) .intelligence-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.intelligence-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 1.15rem;
+}
+
+.intelligence-body {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+body:not(.dark-mode) .intelligence-body {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* --- Suggestion/Recommendation Card Styling --- */
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.rec-card-custom {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+}
+
+body:not(.dark-mode) .rec-card-custom {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.rec-card-custom:hover {
+  transform: translateY(-2px);
+  border-color: #ff6b6b;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.15);
+}
+
+.rec-card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #ff6b6b;
+}
+
+/* --- History list item --- */
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.5rem;
+}
+
+body:not(.dark-mode) .history-item {
+  background: rgba(0, 0, 0, 0.01);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
