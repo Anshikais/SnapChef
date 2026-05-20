@@ -281,77 +281,142 @@ function getMealType(customHour) {
 
 // 1. Upload food image, analyze ingredients/duplicate/meal type, generate AI recommendations
 app.post('/api/food/upload', upload.single('image'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
-  const { clerkUserId, mealType: clientMealType } = req.body;
+  const { clerkUserId, mealType: clientMealType, foodPreference = 'all', detectedFood, ingredients } = req.body;
+  const isRegen = !req.file && detectedFood;
+
+  if (!req.file && !isRegen) {
+    return res.status(400).json({ error: 'No image uploaded' });
+  }
   if (!clerkUserId) return res.status(400).json({ error: 'Provide clerkUserId' });
 
   try {
-    const imageUrl = req.file.path;
-
-    // A. Perceptual hashing using Jimp
+    let imageUrl = '';
     let imageHash = '';
-    try {
-      const jimpImg = await Jimp.read(imageUrl);
-      imageHash = jimpImg.hash(2); // 64-bit binary string
-    } catch (jimpError) {
-      console.error('Jimp error generating hash:', jimpError.message);
+    let detectedIngredients = ingredients || [];
+    let foodName = detectedFood || 'food';
+    let foods = detectedIngredients;
+
+    if (!isRegen) {
+      imageUrl = req.file.path;
+
+      // A. Perceptual hashing using Jimp
+      try {
+        const jimpImg = await Jimp.read(imageUrl);
+        imageHash = jimpImg.hash(2); // 64-bit binary string
+      } catch (jimpError) {
+        console.error('Jimp error generating hash:', jimpError.message);
+      }
+
+      // B. Call Groq Vision to identify specific food items
+      const visionResponse = await groq.chat.completions.create({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `You are a food recognition AI.
+
+Analyze the uploaded image carefully.
+
+Rules:
+- Return ONLY edible food names.
+- Do NOT return generic labels like:
+  "groceries"
+  "fridge contents"
+  "kitchen items"
+  "ingredients"
+  "food items"
+  "mixed food"
+
+- Identify specific foods only.
+
+Examples:
+GOOD:
+- apple
+- banana
+- pizza
+- burger
+- paneer curry
+- rice
+- sandwich
+
+BAD:
+- groceries
+- fridge contents
+- meal
+- ingredients
+
+Return JSON format:
+{
+  "foods": ["apple", "bread", "egg"]
+}
+Do not include any explanation or markdown formatting. Return ONLY JSON.`
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageUrl }
+            }
+          ]
+        }]
+      });
+
+      const visionText = visionResponse.choices[0].message.content.trim();
+      try {
+        const cleaned = visionText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        foods = parsed.foods || [];
+      } catch (parseError) {
+        console.error('Groq Vision parse error:', parseError, visionText);
+        foods = [];
+      }
+
+      // Add Validation Layer
+      const invalidLabels = [
+        "groceries",
+        "fridge contents",
+        "food items",
+        "ingredients",
+        "mixed groceries",
+        "meal"
+      ];
+
+      foods = foods.filter(
+        food => !invalidLabels.includes(food.toLowerCase())
+      );
+
+      if (foods.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Could not detect a valid food item"
+        });
+      }
+
+      // Normalize food names to lowercase
+      foods = foods.map(food => food.toLowerCase());
+
+      detectedIngredients = foods;
+      foodName = foods.join(', ');
+
+      // C. Save to ScanHistory
+      await ScanHistory.create({
+        clerkUserId,
+        imageUrl,
+        ingredients: detectedIngredients
+      });
     }
-
-    // B. Call Groq Vision to identify food name and ingredients
-    let detectedIngredients = [];
-    let foodName = 'food';
-
-    const visionResponse = await groq.chat.completions.create({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Look at this food image carefully.
-Return a JSON object with exactly two keys:
-- "foodName": a short name of the food item or dish (e.g. "apple", "sandwich", "pizza", "chicken curry")
-- "ingredients": a JSON array of detected ingredient names in lowercase (e.g. ["tomato", "cheese"])
-Return ONLY the JSON, no explanation, no markdown formatting.`
-          },
-          {
-            type: 'image_url',
-            image_url: { url: imageUrl }
-          }
-        ]
-      }]
-    });
-
-    const visionText = visionResponse.choices[0].message.content.trim();
-    try {
-      const cleaned = visionText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      detectedIngredients = parsed.ingredients || [];
-      foodName = parsed.foodName || 'food';
-    } catch (parseError) {
-      console.error('Groq Vision parse error:', parseError, visionText);
-      detectedIngredients = [];
-      foodName = 'food';
-    }
-
-    // C. Save to ScanHistory
-    await ScanHistory.create({
-      clerkUserId,
-      imageUrl,
-      ingredients: detectedIngredients
-    });
 
     // D. Time-based Meal Type Detection
     const mealType = clientMealType || getMealType();
 
     // E. Duplicate Detection (Similarity > 85%)
-    const previousUploads = await FoodMemory.find({ userId: clerkUserId }).sort({ uploadTime: -1 });
+    const previousUploads = isRegen ? [] : await FoodMemory.find({ userId: clerkUserId }).sort({ uploadTime: -1 });
 
     let duplicateDetected = false;
     let similarityScore = 0;
     let duplicateInfo = null;
 
-    if (imageHash && previousUploads.length > 0) {
+    if (!isRegen && imageHash && previousUploads.length > 0) {
       for (const prev of previousUploads) {
         if (prev.imageHash) {
           const dist = hammingDistance(imageHash, prev.imageHash);
@@ -378,27 +443,51 @@ Return ONLY the JSON, no explanation, no markdown formatting.`
     };
 
     try {
-      const recPrompt = `User uploaded ${foodName} during ${mealType} time. Suggest healthy ${mealType.toLowerCase()} ideas instead of other meal recipes.
-Ingredients detected: ${JSON.stringify(detectedIngredients)}.
-Please generate personalized recommendations.
-Provide:
-1. recipes: 2-3 names of dishes that can be made using these ingredients.
-2. healthierAlternatives: 2-3 healthier options/substitutes if this food is generally unhealthy, or healthy modifications.
-3. complementaryFoods: 2-3 side dishes, drinks, or foods that pair well with this.
-4. nutritionTips: 2-3 quick nutritional facts or benefits about this food.
+      let dietaryRule = "";
 
-Return the suggestions in raw JSON format matching this schema:
+      if (foodPreference === "veg") {
+        dietaryRule = `
+        ONLY suggest vegetarian dishes.
+        Do NOT include:
+        chicken, egg, fish, meat, seafood, pork, beef.
+        Veg should ONLY return:
+        paneer, tofu, vegetables, fruits, dairy, grains, vegetarian recipes.
+        `;
+      }
+
+      if (foodPreference === "nonveg") {
+        dietaryRule = `
+        You may include chicken, fish, eggs, and meat dishes.
+        `;
+      }
+
+      const prompt = `
+${dietaryRule}
+
+User uploaded:
+${foodName}
+
+Meal Type:
+${mealType}
+
+Generate:
+1. Recipe suggestions
+2. Healthier alternatives
+3. Complementary pairings
+4. Nutrition tips
+
+Return the suggestions as clean bullet points within a raw JSON object matching this schema:
 {
-  "recipes": ["Recipe 1 Name", "Recipe 2 Name"],
+  "recipes": ["Recipe suggestion 1", "Recipe suggestion 2"],
   "healthierAlternatives": ["Alternative 1", "Alternative 2"],
-  "complementaryFoods": ["Partner Food 1", "Partner Food 2"],
+  "complementaryFoods": ["Pairing 1", "Pairing 2"],
   "nutritionTips": ["Tip 1", "Tip 2"]
 }
 Do not include any explanation or markdown markup. Return ONLY JSON.`;
 
       const chatResponse = await groq.chat.completions.create({
         model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: recPrompt }]
+        messages: [{ role: 'user', content: prompt }]
       });
 
       const recText = chatResponse.choices[0].message.content.trim();
@@ -415,20 +504,29 @@ Do not include any explanation or markdown markup. Return ONLY JSON.`;
     }
 
     // G. Store in User Food Memory
-    const newMemory = await FoodMemory.create({
-      userId: clerkUserId,
-      imageUrl,
-      foodName,
-      mealType,
-      aiSuggestions: {
-        recipes: aiRecs.recipes,
-        healthierAlternatives: aiRecs.healthierAlternatives,
-        complementaryFoods: aiRecs.complementaryFoods,
-        nutritionTips: aiRecs.nutritionTips
-      },
-      similarityScore,
-      imageHash
-    });
+    let newMemory = null;
+    if (!isRegen) {
+      for (let i = 0; i < foods.length; i++) {
+        const food = foods[i];
+        const mem = await FoodMemory.create({
+          userId: clerkUserId,
+          imageUrl,
+          foodName: food,
+          mealType,
+          aiSuggestions: {
+            recipes: aiRecs.recipes,
+            healthierAlternatives: aiRecs.healthierAlternatives,
+            complementaryFoods: aiRecs.complementaryFoods,
+            nutritionTips: aiRecs.nutritionTips
+          },
+          similarityScore,
+          imageHash
+        });
+        if (i === 0) {
+          newMemory = mem;
+        }
+      }
+    }
 
     res.json({
       message: 'Image scanned successfully',

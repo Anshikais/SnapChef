@@ -38,7 +38,8 @@ function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('All');
+  const [foodPreference, setFoodPreference] = useState('all');
+  const [recsLoading, setRecsLoading] = useState(false);
 
   const [ingredients, setIngredients] = useState(() => {
     const saved = sessionStorage.getItem('ingredients');
@@ -120,6 +121,7 @@ function Home() {
       setDuplicateInfo(null);
       setShowDuplicateModal(false);
       setError(null);
+      setFoodPreference('all');
       sessionStorage.removeItem('ingredients');
       sessionStorage.removeItem('recipes');
     } else {
@@ -140,6 +142,7 @@ function Home() {
     formData.append('image', selectedFile);
     formData.append('clerkUserId', user.id);
     formData.append('mealType', detectedMealType);
+    formData.append('foodPreference', foodPreference);
 
     try {
       // Step 1: Scan image and save memory
@@ -170,7 +173,7 @@ function Home() {
         `${process.env.REACT_APP_API_URL}/recipes/match`,
         {
           ingredients: detectedIngredients,
-          diet: 'all'
+          diet: foodPreference
         }
       );
 
@@ -185,7 +188,6 @@ function Home() {
       sessionStorage.setItem('recipes', JSON.stringify(recipeList));
 
       setRecipes(recipeList);
-      setFilter('All');
 
       // Refresh intelligence center in background if sections are open
       if (isHistoryOpen) fetchHistory();
@@ -193,11 +195,61 @@ function Home() {
 
     } catch (err) {
       console.error("Error:", err);
-      setError("Something went wrong. Please try again.");
+      const errMsg = err.response?.data?.message || err.response?.data?.error || "Something went wrong. Please try again.";
+      setError(errMsg);
       setIngredients([]);
       setRecipes([]);
     } finally {
       setIsScanning(false);
+    }
+  };
+
+  const handleFilterChange = async (preference) => {
+    setFoodPreference(preference);
+
+    if (detectedFoodName && user) {
+      setRecsLoading(true);
+      setError(null);
+      try {
+        const detectedMealType = getMealType();
+
+        // Send regeneration request to backend
+        const scanRes = await axios.post(
+          `${process.env.REACT_APP_API_URL}/api/food/upload`,
+          {
+            clerkUserId: user.id,
+            detectedFood: detectedFoodName,
+            mealType: detectedMealType,
+            foodPreference: preference,
+            ingredients: ingredients
+          }
+        );
+
+        setAiSuggestions(scanRes.data.aiSuggestions || null);
+
+        // Also fetch matching recipes for the new preference
+        const recipeRes = await axios.post(
+          `${process.env.REACT_APP_API_URL}/recipes/match`,
+          {
+            ingredients: ingredients,
+            diet: preference
+          }
+        );
+
+        const recipeList = Array.isArray(recipeRes.data)
+          ? recipeRes.data
+          : recipeRes.data.recipes || [];
+
+        sessionStorage.setItem('recipes', JSON.stringify(recipeList));
+        setRecipes(recipeList);
+
+      } catch (err) {
+        console.error("Error regenerating recommendations:", err);
+        const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to update recommendations. Please try again.";
+        setError(errMsg);
+      } finally {
+        setRecsLoading(false);
+      }
     }
   };
 
@@ -209,12 +261,12 @@ function Home() {
 
   const filteredRecipes = recipes.filter(recipe => {
     if (!recipe) return false; 
-    if (filter === 'All') return true;
+    if (foodPreference === 'all') return true;
 
     if (recipe.diet) {
       const dietLower = recipe.diet.toLowerCase();
-      if (filter === 'Veg') return dietLower.includes('vegetarian');
-      if (filter === 'Non-Veg') return !dietLower.includes('vegetarian');
+      if (foodPreference === 'veg') return dietLower.includes('vegetarian');
+      if (foodPreference === 'nonveg') return !dietLower.includes('vegetarian');
     }
 
     const isNonVeg = recipe.ingredients?.some(ingredient => {
@@ -222,8 +274,8 @@ function Home() {
       return nonVegKeywords.some(keyword => ingredientLower.includes(keyword));
     });
 
-    if (filter === 'Veg') return !isNonVeg;
-    if (filter === 'Non-Veg') return isNonVeg;
+    if (foodPreference === 'veg') return !isNonVeg;
+    if (foodPreference === 'nonveg') return isNonVeg;
     return true;
   });
 
@@ -270,65 +322,74 @@ function Home() {
         </div>
       )}
 
-      {aiSuggestions && (
+      {(aiSuggestions || recsLoading) && (
         <div className="ai-suggestions-section mb-5 animate-fade-in">
           <h3 className="mb-4 d-flex align-items-center gap-2">
             <span>💡</span> AI Recommendations & Tips
           </h3>
-          <div className="rec-grid">
-            {aiSuggestions.recipes && aiSuggestions.recipes.length > 0 && (
-              <div className="rec-card-custom">
-                <div className="rec-card-title">🍳 Try These Recipes</div>
-                <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
-                  {aiSuggestions.recipes.map((r, i) => <li key={i} className="mb-1 text-white">{r}</li>)}
-                </ul>
+          {recsLoading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-danger" role="status">
+                <span className="visually-hidden">Loading recommendations...</span>
               </div>
-            )}
-            {aiSuggestions.healthierAlternatives && aiSuggestions.healthierAlternatives.length > 0 && (
-              <div className="rec-card-custom">
-                <div className="rec-card-title">🥗 Healthier Alternatives</div>
-                <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
-                  {aiSuggestions.healthierAlternatives.map((h, i) => <li key={i} className="mb-1 text-white">{h}</li>)}
-                </ul>
-              </div>
-            )}
-            {aiSuggestions.complementaryFoods && aiSuggestions.complementaryFoods.length > 0 && (
-              <div className="rec-card-custom">
-                <div className="rec-card-title">🍇 Complementary Pairings</div>
-                <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
-                  {aiSuggestions.complementaryFoods.map((c, i) => <li key={i} className="mb-1 text-white">{c}</li>)}
-                </ul>
-              </div>
-            )}
-            {aiSuggestions.nutritionTips && aiSuggestions.nutritionTips.length > 0 && (
-              <div className="rec-card-custom">
-                <div className="rec-card-title">🔬 Nutrition Tips</div>
-                <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
-                  {aiSuggestions.nutritionTips.map((n, i) => <li key={i} className="mb-1 text-white">{n}</li>)}
-                </ul>
-              </div>
-            )}
-          </div>
+              <p className="mt-3 text-secondary">Regenerating personalized suggestions...</p>
+            </div>
+          ) : (
+            <div className="rec-grid">
+              {aiSuggestions && aiSuggestions.recipes && aiSuggestions.recipes.length > 0 && (
+                <div className="rec-card-custom">
+                  <div className="rec-card-title">🍳 Try These Recipes</div>
+                  <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
+                    {aiSuggestions.recipes.map((r, i) => <li key={i} className="mb-1 text-white">{r}</li>)}
+                  </ul>
+                </div>
+              )}
+              {aiSuggestions && aiSuggestions.healthierAlternatives && aiSuggestions.healthierAlternatives.length > 0 && (
+                <div className="rec-card-custom">
+                  <div className="rec-card-title">🥗 Healthier Alternatives</div>
+                  <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
+                    {aiSuggestions.healthierAlternatives.map((h, i) => <li key={i} className="mb-1 text-white">{h}</li>)}
+                  </ul>
+                </div>
+              )}
+              {aiSuggestions && aiSuggestions.complementaryFoods && aiSuggestions.complementaryFoods.length > 0 && (
+                <div className="rec-card-custom">
+                  <div className="rec-card-title">🍇 Complementary Pairings</div>
+                  <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
+                    {aiSuggestions.complementaryFoods.map((c, i) => <li key={i} className="mb-1 text-white">{c}</li>)}
+                  </ul>
+                </div>
+              )}
+              {aiSuggestions && aiSuggestions.nutritionTips && aiSuggestions.nutritionTips.length > 0 && (
+                <div className="rec-card-custom">
+                  <div className="rec-card-title">🔬 Nutrition Tips</div>
+                  <ul className="text-secondary ps-3 mb-0" style={{ fontSize: '0.95rem' }}>
+                    {aiSuggestions.nutritionTips.map((n, i) => <li key={i} className="mb-1 text-white">{n}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {recipes.length > 0 && (
         <div className="d-flex justify-content-center my-4 gap-3 animate-fade-in">
           <button
-            className={`btn rounded-pill px-4 ${filter === 'All' ? 'btn-primary-custom' : 'btn-outline-secondary'}`}
-            onClick={() => setFilter('All')}
+            className={`btn rounded-pill px-4 ${foodPreference === 'all' ? 'btn-primary-custom' : 'btn-outline-secondary'}`}
+            onClick={() => handleFilterChange('all')}
           >
             🍽️ All
           </button>
           <button
-            className={`btn rounded-pill px-4 ${filter === 'Veg' ? 'btn-success' : 'btn-outline-success'}`}
-            onClick={() => setFilter('Veg')}
+            className={`btn rounded-pill px-4 ${foodPreference === 'veg' ? 'btn-success' : 'btn-outline-success'}`}
+            onClick={() => handleFilterChange('veg')}
           >
             🥦 Veg
           </button>
           <button
-            className={`btn rounded-pill px-4 ${filter === 'Non-Veg' ? 'btn-danger' : 'btn-outline-danger'}`}
-            onClick={() => setFilter('Non-Veg')}
+            className={`btn rounded-pill px-4 ${foodPreference === 'nonveg' ? 'btn-danger' : 'btn-outline-danger'}`}
+            onClick={() => handleFilterChange('nonveg')}
           >
             🍗 Non-Veg
           </button>
