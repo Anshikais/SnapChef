@@ -45,6 +45,13 @@ const foodMemorySchema = new mongoose.Schema({
   },
   imageHash: {
     type: String
+  },
+  estimatedExpiryDate: {
+    type: Date
+  },
+  isUsed: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

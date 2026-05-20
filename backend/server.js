@@ -279,6 +279,26 @@ function getMealType(customHour) {
 // FOOD INTELLIGENCE ENDPOINTS
 // ==============================
 
+function getEstimatedExpiryDays(foodName) {
+  const name = foodName.toLowerCase();
+  if (name.includes('banana')) return 3;
+  if (name.includes('strawberry') || name.includes('strawberries')) return 2;
+  if (name.includes('milk')) return 6;
+  if (name.includes('bread')) return 4;
+  if (name.includes('tomato')) return 3;
+  if (name.includes('spinach')) return 4;
+  if (name.includes('egg')) return 14;
+  if (name.includes('cheese')) return 7;
+  if (name.includes('butter')) return 14;
+  if (name.includes('chicken') || name.includes('meat') || name.includes('fish') || name.includes('seafood') || name.includes('salmon') || name.includes('beef') || name.includes('pork')) return 2;
+  if (name.includes('apple') || name.includes('orange') || name.includes('lemon') || name.includes('grape')) return 7;
+  if (name.includes('paneer') || name.includes('tofu')) return 5;
+  if (name.includes('lettuce') || name.includes('salad') || name.includes('cabbage') || name.includes('cucumber')) return 4;
+  if (name.includes('carrot') || name.includes('potato') || name.includes('onion') || name.includes('garlic')) return 14;
+  if (name.includes('yogurt') || name.includes('curd')) return 5;
+  return 7; // default 7 days
+}
+
 // 1. Upload food image, analyze ingredients/duplicate/meal type, generate AI recommendations
 app.post('/api/food/upload', upload.single('image'), async (req, res) => {
   const { clerkUserId, mealType: clientMealType, foodPreference = 'all', detectedFood, ingredients } = req.body;
@@ -508,6 +528,10 @@ Do not include any explanation or markdown markup. Return ONLY JSON.`;
     if (!isRegen) {
       for (let i = 0; i < foods.length; i++) {
         const food = foods[i];
+        const expiryDays = getEstimatedExpiryDays(food);
+        const estimatedExpiryDate = new Date();
+        estimatedExpiryDate.setDate(estimatedExpiryDate.getDate() + expiryDays);
+
         const mem = await FoodMemory.create({
           userId: clerkUserId,
           imageUrl,
@@ -520,7 +544,9 @@ Do not include any explanation or markdown markup. Return ONLY JSON.`;
             nutritionTips: aiRecs.nutritionTips
           },
           similarityScore,
-          imageHash
+          imageHash,
+          estimatedExpiryDate,
+          isUsed: false
         });
         if (i === 0) {
           newMemory = mem;
@@ -543,6 +569,21 @@ Do not include any explanation or markdown markup. Return ONLY JSON.`;
   } catch (error) {
     console.error('Error in /api/food/upload:', error);
     res.status(500).json({ error: 'Failed to upload and analyze food' });
+  }
+});
+
+// 1b. Mark a food item as consumed/used
+app.post('/api/food/consume/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await FoodMemory.findByIdAndUpdate(id, { isUsed: true }, { new: true });
+    if (!updated) {
+      return res.status(404).json({ error: 'Food memory not found' });
+    }
+    res.json({ success: true, message: 'Food item marked as consumed', food: updated });
+  } catch (error) {
+    console.error('Error in /api/food/consume:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -625,35 +666,72 @@ Do not include any explanation or markdown formatting. Return ONLY JSON.`;
 app.get('/api/food/insights/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const history = await FoodMemory.find({ userId });
-    if (history.length === 0) {
+    const name = req.query.name || 'Anshika';
+    
+    // Find all active (unused) food items
+    const unusedItems = await FoodMemory.find({ userId, isUsed: false }).sort({ uploadTime: -1 });
+
+    if (unusedItems.length === 0) {
       return res.json({
-        repeatedFoods: [],
-        patterns: ["No food history recorded yet. Start scanning your meals to get insights!"],
-        missingNutrients: ["Insights will appear after you scan some meals."],
-        favoriteFoods: []
+        popup: {
+          show: false,
+          title: "",
+          message: ""
+        },
+        expiringSoon: [],
+        cookToday: ["Scan your first grocery or food item to get meal ideas!"],
+        unusedIngredients: [],
+        smartSuggestions: [`Welcome to SnapChef, ${name}! Scan foods or groceries above to track freshness, get custom recipes, and reduce food waste.`],
+        quickRecipes: [],
+        fridgeInventory: []
       });
     }
 
-    const historySummary = history.map(h => `${h.foodName} (${h.mealType})`).join(', ');
+    const ingredientsList = unusedItems.map(item => item.foodName.toLowerCase());
+    
+    // Build brief details of items with their remaining days for the AI prompt
+    const now = new Date();
+    const itemsWithExpiryDetails = unusedItems.map(item => {
+      const expiry = new Date(item.estimatedExpiryDate || now);
+      const diffTime = expiry - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return `${item.foodName} (uploaded ${item.uploadTime.toLocaleDateString()}, expires in ${diffDays} days)`;
+    }).join(', ');
 
-    const prompt = `You are a personalized nutrition AI. Analyze the following food history of a user:
-[${historySummary}]
+    const prompt = `You are an intelligent kitchen assistant.
+User name: ${name}
+Available unused ingredients currently in the user's fridge/kitchen:
+[${ingredientsList.join(', ')}]
 
-Please generate insights regarding:
-1. Repeated foods
-2. Healthy/unhealthy patterns
-3. Missing nutrients
-4. Favorite foods
+Details of ingredients and their estimated expiry/spoilage:
+[${itemsWithExpiryDetails}]
 
-Format your response in raw JSON matching this schema:
+Generate a highly personalized response in raw JSON format matching this schema:
 {
-  "repeatedFoods": ["Food Item 1 (X times)", "Food Item 2 (Y times)"],
-  "patterns": ["Insight pattern 1", "Insight pattern 2"],
-  "missingNutrients": ["Nutrient 1 (source food recommendation)", "Nutrient 2"],
-  "favoriteFoods": ["Favorite 1", "Favorite 2"]
+  "popup": {
+    "show": true,
+    "title": "Short title using emojis (e.g. Freshness Alert! 🚨)",
+    "message": "A friendly conversational popup message greeting the user by name (e.g., 'Anshika, your tomatoes should be used today 🍅'). Include a suggestion of 2-3 specific recipes they can make using ONLY these available ingredients."
+  },
+  "expiringSoon": ["Ingredient Name (expires in X days) ⏳"],
+  "cookToday": ["Dishes the user can cook today based on available ingredients and those expiring soon"],
+  "unusedIngredients": ["Ingredient Name (unused for X days)"],
+  "smartSuggestions": ["Conversational suggestions or tips tailored to the user's name"],
+  "quickRecipes": [
+    {
+      "name": "Recipe Name",
+      "ingredients": ["required", "ingredients", "list"]
+    }
+  ]
 }
-Do not include any explanation or markdown formatting. Return ONLY JSON.`;
+
+Rules:
+- Personalize all messages and suggestions using the user's name: ${name}.
+- Avoid robotic or clinical nutrition/medical/calorie tracking language. Keep it conversational, friendly, and culinary-focused.
+- Recipes must ONLY use the available unused ingredients listed above. Do not suggest recipes requiring unavailable ingredients.
+- "expiringSoon" should list ingredients expiring in <= 3 days.
+- "unusedIngredients" should list ingredients that have been in the database for 2 or more days.
+- Return ONLY the raw JSON, no explanations, no markdown code blocks.`;
 
     const response = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
@@ -663,7 +741,11 @@ Do not include any explanation or markdown formatting. Return ONLY JSON.`;
     const text = response.choices[0].message.content.trim();
     const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleaned);
-    res.json(parsed);
+
+    res.json({
+      ...parsed,
+      fridgeInventory: unusedItems
+    });
   } catch (error) {
     console.error('Error in /api/food/insights:', error);
     res.status(500).json({ error: error.message });

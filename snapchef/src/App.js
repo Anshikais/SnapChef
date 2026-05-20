@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from "@clerk/clerk-react";
 import axios from 'axios';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -56,6 +56,8 @@ function Home() {
   const [aiSuggestions, setAiSuggestions] = useState(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateInfo, setDuplicateInfo] = useState(null);
+  const [popupModal, setPopupModal] = useState(null);
+  const [showPopupModal, setShowPopupModal] = useState(false);
 
   // Intelligence center states
   const [history, setHistory] = useState([]);
@@ -85,8 +87,14 @@ function Home() {
     if (!user) return;
     setInsightsLoading(true);
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/food/insights/${user.id}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/food/insights/${user.id}?name=${user.firstName || 'Anshika'}`);
       setInsights(res.data);
+      
+      // Smart Popup System: Trigger popup modal if show is true and we haven't dismissed it in this session
+      if (res.data.popup && res.data.popup.show && !sessionStorage.getItem('hasShownExpiryPopup')) {
+        setPopupModal(res.data.popup);
+        setShowPopupModal(true);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -105,6 +113,23 @@ function Home() {
       console.error(err);
     } finally {
       setSuggestionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchInsights();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleMarkAsUsed = async (id) => {
+    try {
+      await axios.post(`${process.env.REACT_APP_API_URL}/api/food/consume/${id}`);
+      fetchInsights();
+      fetchHistory();
+    } catch (err) {
+      console.error("Error marking ingredient as used:", err);
     }
   };
 
@@ -189,9 +214,9 @@ function Home() {
 
       setRecipes(recipeList);
 
-      // Refresh intelligence center in background if sections are open
-      if (isHistoryOpen) fetchHistory();
-      if (isInsightsOpen) fetchInsights();
+      // Refresh intelligence center in background
+      fetchHistory();
+      fetchInsights();
 
     } catch (err) {
       console.error("Error:", err);
@@ -406,7 +431,7 @@ function Home() {
           </div>
         ) : (
           <div className="text-center text-muted mt-4 mb-5">
-            <p>No {filter} recipes found. Try a different filter! 🍽️</p>
+            <p>No {foodPreference === 'all' ? '' : foodPreference} recipes found. Try a different filter! 🍽️</p>
           </div>
         )
       )}
@@ -427,7 +452,7 @@ function Home() {
                 if (nextState && !insights) fetchInsights();
               }}
             >
-              <span>📊 Personalized Diet Insights</span>
+              <span>📊 AI Smart Kitchen Assistant Insights</span>
               <span>{isInsightsOpen ? '▲' : '▼'}</span>
             </div>
             {isInsightsOpen && (
@@ -435,37 +460,127 @@ function Home() {
                 {insightsLoading ? (
                   <div className="text-center py-3">
                     <div className="spinner-border spinner-border-sm text-danger" role="status"></div>
-                    <span className="ms-2 text-secondary">Analyzing diet history...</span>
+                    <span className="ms-2 text-secondary">Loading kitchen intelligence...</span>
                   </div>
                 ) : insights ? (
                   <div className="row g-3">
+                    {/* A. Expiring Soon */}
                     <div className="col-md-6">
-                      <h6 className="text-danger fw-bold">🔄 Repeated Foods</h6>
-                      <ul className="text-white ps-3 mb-3">
-                        {insights.repeatedFoods && insights.repeatedFoods.length > 0 ? (
-                          insights.repeatedFoods.map((f, i) => <li key={i} className="small mb-1">{f}</li>)
-                        ) : (
-                          <li className="small text-secondary">No repeated foods detected yet.</li>
-                        )}
-                      </ul>
-                      <h6 className="text-danger fw-bold">⭐ Favorite Foods</h6>
-                      <ul className="text-white ps-3">
-                        {insights.favoriteFoods && insights.favoriteFoods.length > 0 ? (
-                          insights.favoriteFoods.map((f, i) => <li key={i} className="small mb-1">{f}</li>)
-                        ) : (
-                          <li className="small text-secondary">Favorites will show up here.</li>
-                        )}
-                      </ul>
+                      <div className="card bg-dark border-secondary p-3 mb-3 h-100">
+                        <h6 className="text-danger fw-bold d-flex align-items-center justify-content-between">
+                          <span>⏳ Expiring Soon</span>
+                          <span className="badge bg-danger">{insights.expiringSoon ? insights.expiringSoon.length : 0}</span>
+                        </h6>
+                        <ul className="text-white ps-0 mb-0" style={{ listStyleType: 'none' }}>
+                          {insights.expiringSoon && insights.expiringSoon.length > 0 ? (
+                            insights.expiringSoon.map((item, i) => (
+                              <li key={i} className="small mb-2 d-flex justify-content-between align-items-center bg-black bg-opacity-25 p-2 rounded">
+                                <span>{item}</span>
+                                {insights.fridgeInventory && insights.fridgeInventory.find(inv => inv.foodName.toLowerCase() === item.split(' ')[0].toLowerCase()) && (
+                                  <button 
+                                    className="btn btn-outline-danger btn-sm py-0 px-2"
+                                    onClick={() => handleMarkAsUsed(insights.fridgeInventory.find(inv => inv.foodName.toLowerCase() === item.split(' ')[0].toLowerCase())._id)}
+                                  >
+                                    Used
+                                  </button>
+                                )}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="small text-secondary italic">No items expiring soon.</li>
+                          )}
+                        </ul>
+                      </div>
                     </div>
+
+                    {/* B. Cook Today */}
                     <div className="col-md-6">
-                      <h6 className="text-danger fw-bold">📉 Eating Patterns</h6>
-                      <ul className="text-white ps-3 mb-3">
-                        {insights.patterns && insights.patterns.map((p, i) => <li key={i} className="small mb-1">{p}</li>)}
-                      </ul>
-                      <h6 className="text-danger fw-bold">🧪 Missing Nutrients</h6>
-                      <ul className="text-white ps-3">
-                        {insights.missingNutrients && insights.missingNutrients.map((n, i) => <li key={i} className="small mb-1">{n}</li>)}
-                      </ul>
+                      <div className="card bg-dark border-secondary p-3 mb-3 h-100">
+                        <h6 className="text-danger fw-bold">🍳 Cook Today</h6>
+                        <ul className="text-white ps-3 mb-0">
+                          {insights.cookToday && insights.cookToday.length > 0 ? (
+                            insights.cookToday.map((f, i) => <li key={i} className="small mb-1">{f}</li>)
+                          ) : (
+                            <li className="small text-secondary">No meal ideas. Scan ingredients first!</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* C. Unused Ingredients */}
+                    <div className="col-md-6">
+                      <div className="card bg-dark border-secondary p-3 mb-3 h-100">
+                        <h6 className="text-danger fw-bold d-flex align-items-center justify-content-between">
+                          <span>📦 Fridge Inventory (Unused)</span>
+                        </h6>
+                        <ul className="text-white ps-0 mb-0" style={{ listStyleType: 'none', maxHeight: '180px', overflowY: 'auto' }}>
+                          {insights.fridgeInventory && insights.fridgeInventory.length > 0 ? (
+                            insights.fridgeInventory.map((item, i) => {
+                              const expDate = new Date(item.estimatedExpiryDate);
+                              const remainingDays = Math.ceil((expDate - new Date()) / (1000 * 60 * 60 * 24));
+                              let badgeColor = "bg-success";
+                              if (remainingDays <= 1) badgeColor = "bg-danger";
+                              else if (remainingDays <= 3) badgeColor = "bg-warning text-dark";
+
+                              return (
+                                <li key={i} className="small mb-2 d-flex justify-content-between align-items-center bg-black bg-opacity-25 p-2 rounded">
+                                  <div>
+                                    <span className="fw-semibold text-white">{item.foodName}</span>
+                                    <span className={`badge ${badgeColor} ms-2`} style={{ fontSize: '0.7rem' }}>
+                                      {remainingDays <= 0 ? "Expired" : `${remainingDays}d left`}
+                                    </span>
+                                  </div>
+                                  <button 
+                                    className="btn btn-outline-danger btn-sm py-0 px-2"
+                                    onClick={() => handleMarkAsUsed(item._id)}
+                                  >
+                                    Used
+                                  </button>
+                                </li>
+                              );
+                            })
+                          ) : (
+                            <li className="small text-secondary italic">Your fridge is empty. Scan grocery/food images!</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* D. Smart Suggestions */}
+                    <div className="col-md-6">
+                      <div className="card bg-dark border-secondary p-3 mb-3 h-100">
+                        <h6 className="text-danger fw-bold text-gradient">✨ Smart Suggestions</h6>
+                        <ul className="text-white ps-3 mb-0">
+                          {insights.smartSuggestions && insights.smartSuggestions.length > 0 ? (
+                            insights.smartSuggestions.map((s, i) => <li key={i} className="small mb-1">{s}</li>)
+                          ) : (
+                            <li className="small text-secondary">Scan foods to see dynamic suggestions.</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* E. Quick Recipes */}
+                    <div className="col-12">
+                      <div className="card bg-dark border-secondary p-3">
+                        <h6 className="text-danger fw-bold">📖 Quick Recipes (Using Available Ingredients)</h6>
+                        <div className="row g-2 mt-1">
+                          {insights.quickRecipes && insights.quickRecipes.length > 0 ? (
+                            insights.quickRecipes.map((recipe, i) => (
+                              <div key={i} className="col-md-4">
+                                <div className="p-2 rounded bg-black bg-opacity-25 h-100 border border-secondary border-opacity-25">
+                                  <div className="fw-bold text-white small">🍽️ {recipe.name}</div>
+                                  <div className="text-secondary small mt-1" style={{ fontSize: '0.75rem' }}>
+                                    Ingredients: {recipe.ingredients.join(', ')}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-secondary small col-12 italic">No recipes found. Try scanning more items!</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -598,6 +713,28 @@ function Home() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart AI Kitchen Assistant Popup Modal */}
+      {showPopupModal && popupModal && (
+        <div className="modal-overlay">
+          <div className="modal-content-custom" style={{ maxWidth: '500px' }}>
+            <span style={{ fontSize: '3rem' }}>🤖</span>
+            <h3 className="fw-bold my-3 text-white">{popupModal.title}</h3>
+            <div className="text-secondary fs-6 mb-4" style={{ whiteSpace: 'pre-line', textAlign: 'left', lineHeight: '1.6' }}>
+              {popupModal.message}
+            </div>
+            <button 
+              className="btn btn-danger btn-lg w-100 rounded-pill py-2 fw-semibold"
+              onClick={() => {
+                setShowPopupModal(false);
+                sessionStorage.setItem('hasShownExpiryPopup', 'true');
+              }}
+            >
+              Perfect, thank you!
+            </button>
           </div>
         </div>
       )}
