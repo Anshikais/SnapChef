@@ -11,7 +11,23 @@ const foodMemorySchema = new mongoose.Schema({
   },
   foodName: {
     type: String,
-    required: true
+    required: false
+  },
+  category: {
+    type: String
+  },
+  detectedItems: {
+    type: [String],
+    default: []
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  },
+  itemType: {
+    type: String,
+    enum: ['ingredient', 'meal'],
+    default: 'ingredient'
   },
   uploadTime: {
     type: Date,
