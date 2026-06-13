@@ -24,7 +24,7 @@ const getMealType = () => {
   } else if (hour >= 16 && hour < 22) {
     mealType = "Dinner";
   } else {
-    mealType = "Snacks";
+    mealType = "Midnight Snacks";
   }
 
   console.log("Current Hour:", hour);
@@ -750,9 +750,9 @@ function App() {
 
   if (!container) return;
 
-  const items = [
-    "✨"
-  ];
+//  const items = [
+ //   ""
+ // ];
   const create = () => {
     const el =
       document.createElement("div");

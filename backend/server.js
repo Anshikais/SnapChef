@@ -522,38 +522,39 @@ Do not include any explanation or markdown markup. Return ONLY JSON.`;
     } catch (recError) {
       console.error('Error generating recommendations:', recError);
     }
-
     // G. Store in User Food Memory
-    let newMemory = null;
-    if (!isRegen) {
-      for (let i = 0; i < foods.length; i++) {
-        const food = foods[i];
-        const expiryDays = getEstimatedExpiryDays(food);
-        const estimatedExpiryDate = new Date();
-        estimatedExpiryDate.setDate(estimatedExpiryDate.getDate() + expiryDays);
-
-        const mem = await FoodMemory.create({
-          userId: clerkUserId,
-          imageUrl,
-          foodName: food,
-          mealType,
-          aiSuggestions: {
-            recipes: aiRecs.recipes,
-            healthierAlternatives: aiRecs.healthierAlternatives,
-            complementaryFoods: aiRecs.complementaryFoods,
-            nutritionTips: aiRecs.nutritionTips
-          },
-          similarityScore,
-          imageHash,
-          estimatedExpiryDate,
-          isUsed: false
-        });
-        if (i === 0) {
-          newMemory = mem;
-        }
-      }
-    }
-
+let newMemory = null;
+if (!isRegen) {
+  const expiryDays = Math.max(
+    ...foods.map(food => getEstimatedExpiryDays(food))
+  );
+  const estimatedExpiryDate = new Date();
+  estimatedExpiryDate.setDate(
+    estimatedExpiryDate.getDate() + expiryDays
+  );
+  newMemory = await FoodMemory.create({
+    userId: clerkUserId,
+    imageUrl,
+    // Main title
+    foodName:
+      foods.length > 3
+        ? `${foods[0]}, ${foods[1]}, ${foods[2]} +${foods.length - 3} more`
+        : foods.join(', '),
+    // Store all detected ingredients
+    detectedItems: foods,
+    mealType,
+    aiSuggestions: {
+      recipes: aiRecs.recipes,
+      healthierAlternatives: aiRecs.healthierAlternatives,
+      complementaryFoods: aiRecs.complementaryFoods,
+      nutritionTips: aiRecs.nutritionTips
+    },
+    similarityScore,
+    imageHash,
+    estimatedExpiryDate,
+    isUsed: false
+  });
+}
     res.json({
       message: 'Image scanned successfully',
       ingredients: detectedIngredients,
