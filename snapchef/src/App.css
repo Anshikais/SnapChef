@@ -342,11 +342,40 @@ body.dark-mode .modal-content-custom {
 
 /* --- Collapsible Food Intelligence Section --- */
 .intelligence-card {
-  background-color: #181818;
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  transition: all 0.3s ease;
+  background: rgba(255,255,255,0.06);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+
+  border: 1px solid rgba(255,255,255,0.12);
+
+  border-radius: 24px;
+
+  color: white;
+
+  box-shadow:
+    0 8px 32px rgba(0,0,0,.35),
+    0 0 40px rgba(75,31,111,.15);
+
+  transition: all .3s ease;
+}
+
+.intelligence-card:hover {
+  transform: translateY(-4px);
+}
+
+.intelligence-card h1,
+.intelligence-card h2,
+.intelligence-card h3,
+.intelligence-card h4,
+.intelligence-card h5,
+.intelligence-card h6 {
+  color: #ffffff;
+}
+.intelligence-card p,
+.intelligence-card span,
+.intelligence-card li {
+  color: rgba(255,255,255,.85);
 }
 
 body:not(.dark-mode) .intelligence-card {
