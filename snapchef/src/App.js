@@ -751,8 +751,6 @@ function App() {
   if (!container) return;
 
   const items = [
-    "👨‍🍳",
-    "🌿",
     "✨"
   ];
   const create = () => {
