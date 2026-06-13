@@ -1,6 +1,6 @@
-import React from 'react';
-import { SignIn, useUser } from '@clerk/clerk-react';
-import { Navigate } from 'react-router-dom';
+import React from "react";
+import { SignIn, useUser } from "@clerk/clerk-react";
+import { Navigate } from "react-router-dom";
 
 export default function SignInPage() {
   const { isLoaded, isSignedIn } = useUser();
@@ -9,11 +9,9 @@ export default function SignInPage() {
     return (
       <div
         className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: '100vh' }}
+        style={{ minHeight: "100vh" }}
       >
-        <div className="spinner-border text-danger" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+        <div className="spinner-border text-danger"></div>
       </div>
     );
   }
@@ -26,38 +24,28 @@ export default function SignInPage() {
     <div
       className="container d-flex flex-column justify-content-center align-items-center"
       style={{
-        minHeight: '100vh',
-        padding: '2rem',
-        position: 'relative',
+        minHeight: "100vh",
+        position: "relative",
         zIndex: 2,
       }}
     >
-      {/* Logo Section */}
+      {/* Logo */}
       <div className="text-center mb-4">
         <div
+          className="logo-float"
           style={{
-            width: '80px',
-            height: '80px',
-            margin: '0 auto 15px',
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontSize: '2rem',
+            fontSize: "4rem",
+            marginBottom: "10px",
           }}
         >
-          🍳
+          👨‍🍳
         </div>
 
         <h1
-          className="fw-bold"
           style={{
-            color: '#ff6b6b',
-            fontSize: '3rem',
-            marginBottom: '10px',
+            color: "#ff6b6b",
+            fontWeight: "700",
+            fontSize: "3rem",
           }}
         >
           SnapChef
@@ -65,92 +53,88 @@ export default function SignInPage() {
 
         <p
           style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: '1rem',
+            color: "rgba(255,255,255,.7)",
           }}
         >
-          Welcome back! Please sign in to continue.
+          AI Powered Recipe Assistant
         </p>
       </div>
 
-      {/* Glass Card */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '500px',
-
-          background: 'rgba(255,255,255,0.06)',
-
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-
-          border: '1px solid rgba(255,255,255,0.12)',
-
-          borderRadius: '30px',
-
-          boxShadow:
-            '0 8px 32px rgba(0,0,0,.35), 0 0 60px rgba(75,31,111,.15)',
-
-          padding: '20px',
-        }}
-      >
-        <SignIn
-          routing="hash"
-          appearance={{
-            elements: {
-              rootBox: {
-                width: '100%',
-              },
-
-              card: {
-                background: 'transparent',
-                boxShadow: 'none',
-                border: 'none',
-              },
-
-              headerTitle: {
-                color: '#ffffff',
-                fontSize: '28px',
-                fontWeight: '700',
-              },
-
-              headerSubtitle: {
-                color: 'rgba(255,255,255,0.7)',
-              },
-
-              socialButtonsBlockButton: {
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#ffffff',
-              },
-
-              formFieldInput: {
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#ffffff',
-              },
-
-              formButtonPrimary: {
-                background:
-                  'linear-gradient(135deg,#ff6b6b,#ff8e8e)',
-                border: 'none',
-              },
-
-              footerActionLink: {
-                color: '#ff6b6b',
-              },
-
-              dividerLine: {
-                background: 'rgba(255,255,255,0.15)',
-              },
-
-              dividerText: {
-                color: 'rgba(255,255,255,0.5)',
-              },
+      <SignIn
+        routing="hash"
+        appearance={{
+          elements: {
+            rootBox: {
+              width: "100%",
+              maxWidth: "420px",
             },
-          }}
-        />
-      </div>
+
+            card: {
+              background: "rgba(255,255,255,0.06)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(255,255,255,.12)",
+              borderRadius: "24px",
+              boxShadow:
+                "0 20px 60px rgba(0,0,0,.35)",
+            },
+
+            headerTitle: {
+              display: "none",
+            },
+
+            headerSubtitle: {
+              display: "none",
+            },
+
+            footer: {
+              display: "none",
+            },
+
+            footerAction: {
+              display: "none",
+            },
+
+            footerActionText: {
+              display: "none",
+            },
+
+            footerActionLink: {
+              display: "none",
+            },
+
+            socialButtonsBlockButton: {
+              background: "rgba(255,255,255,.08)",
+              border: "1px solid rgba(255,255,255,.12)",
+              color: "#fff",
+            },
+
+            formFieldInput: {
+              background: "rgba(255,255,255,.08)",
+              border: "1px solid rgba(255,255,255,.15)",
+              color: "#fff",
+            },
+
+            formButtonPrimary: {
+              background:
+                "linear-gradient(135deg,#ff6b6b,#ff8e8e)",
+              border: "none",
+            },
+
+            dividerText: {
+              color: "rgba(255,255,255,.5)",
+            },
+
+            dividerLine: {
+              background: "rgba(255,255,255,.15)",
+            },
+
+            identityPreviewText: {
+              color: "#fff",
+            },
+          },
+        }}
+      />
     </div>
   );
 }
