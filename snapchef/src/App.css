@@ -1,14 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
-
 body {
   font-family: 'Outfit', sans-serif;
-   background-color: #1a1420;  /* dark purple-black base */
-  color: #333;
+
+  background:
+    radial-gradient(circle at top left,#4B1F6F 0%,transparent 35%),
+    radial-gradient(circle at top right,#214A87 0%,transparent 30%),
+    linear-gradient(
+      135deg,
+      #050816 0%,
+      #070B1A 40%,
+      #0A1024 100%
+    );
+
+  color: #fff;
   position: relative;
   overflow-x: hidden;
-
+  min-height: 100vh;
 }
-
 /* Navbar */
 .navbar-brand {
   font-weight: 700;
@@ -19,11 +27,13 @@ body {
   gap: 0.5rem;
 }
 .navbar {
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
-  background: rgba(255,255,255,0.08) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,.06);
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+border:1px solid rgba(255,255,255,.12);
+box-shadow:
+0 8px 32px rgba(0,0,0,.35),
+0 0 60px rgba(75,31,111,.12);
 }
 /* Main Container */
 .main-container {
@@ -36,11 +46,13 @@ body {
 .upload-card {
   border: 2px dashed #cbd5e1;
   border-radius: 1rem;
-   background: rgba(255,255,255,0.07);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-color: rgba(255,255,255,0.15);
-  color: #fff;
+  background: rgba(255,255,255,.06);
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+border:1px solid rgba(255,255,255,.12);
+box-shadow:
+0 8px 32px rgba(0,0,0,.35),
+0 0 60px rgba(75,31,111,.12);
   padding: 3rem 1rem;
   text-align: center;
   transition: all 0.3s ease;
@@ -103,11 +115,13 @@ body {
   border-radius: 1rem;
   overflow: hidden;
   transition: all 0.3s ease;
-   background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
+  background: rgba(255,255,255,.06);
+backdrop-filter: blur(24px);
+-webkit-backdrop-filter: blur(24px);
+border:1px solid rgba(255,255,255,.12);
+box-shadow:
+0 8px 32px rgba(0,0,0,.35),
+0 0 60px rgba(75,31,111,.12);
   height: 100%;
 }
 
@@ -410,31 +424,147 @@ body:not(.dark-mode) .history-item {
   background: rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
-/* ── Animated Bokeh Background ── */
-#blob-layer {
-  position: fixed;  /* fixed so it covers whole page on scroll */
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;  /* behind all content */
-  overflow: hidden;
+/* =========================
+   SNAPCHEF PREMIUM BOKEH
+========================= */
+
+#blob-layer{
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  pointer-events:none;
+  z-index:0;
 }
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: blobDrift ease-in-out infinite;
+
+.blob{
+  position:absolute;
+  border-radius:50%;
+  mix-blend-mode:screen;
+  animation:blobDrift 18s ease-in-out infinite;
 }
-.blob-1 { width:500px; height:500px; background:#7b2dbd; filter:blur(110px); opacity:0.45; top:-170px; left:-150px; animation-duration:12s; }
-.blob-2 { width:380px; height:380px; background:#3fa4e0; filter:blur(95px);  opacity:0.4;  top:-80px;  right:-100px; animation-duration:15s; animation-delay:-5s; }
-.blob-3 { width:440px; height:440px; background:#1e3a6e; filter:blur(115px); opacity:0.55; bottom:-130px; left:10%; animation-duration:13s; animation-delay:-3s; }
-.blob-4 { width:280px; height:280px; background:#b0b8c8; filter:blur(85px);  opacity:0.2;  bottom:-50px; right:0;   animation-duration:10s; animation-delay:-7s; }
-.blob-5 { width:220px; height:220px; background:#6a1fa0; filter:blur(75px);  opacity:0.3;  top:42%; left:42%; animation-duration:17s; animation-delay:-9s; }
-@keyframes blobDrift {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33%     { transform: translate(28px,-38px) scale(1.07); }
-  66%     { transform: translate(-22px,26px) scale(0.94); }
+
+.blob-1{
+  width:650px;
+  height:650px;
+  background:#5A1E85;
+  filter:blur(160px);
+  opacity:.55;
+  top:-250px;
+  left:-250px;
 }
-.navbar, .main-container, .modal-overlay {
-  position: relative;
-  z-index: 1;
+
+.blob-2{
+  width:550px;
+  height:550px;
+  background:#2F80ED;
+  filter:blur(150px);
+  opacity:.45;
+  top:-180px;
+  right:-180px;
+}
+
+.blob-3{
+  width:600px;
+  height:600px;
+  background:#102A5A;
+  filter:blur(170px);
+  opacity:.55;
+  bottom:-250px;
+  left:10%;
+}
+
+.blob-4{
+  width:350px;
+  height:350px;
+  background:#8EC5FF;
+  filter:blur(120px);
+  opacity:.08;
+  bottom:-100px;
+  right:0;
+}
+
+.blob-5{
+  width:300px;
+  height:300px;
+  background:#7A3EC8;
+  filter:blur(130px);
+  opacity:.25;
+  top:45%;
+  left:45%;
+}
+
+@keyframes blobDrift{
+
+  0%,100%{
+    transform:translate(0,0) scale(1);
+  }
+
+  33%{
+    transform:translate(40px,-50px) scale(1.08);
+  }
+
+  66%{
+    transform:translate(-30px,30px) scale(.95);
+  }
+}
+
+#floating-elements{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+
+.float-item{
+  position:absolute;
+  animation:floatUp linear infinite;
+  opacity:.8;
+}
+
+.glow-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#FF6B6B;
+
+  box-shadow:
+  0 0 10px #FF6B6B,
+  0 0 20px #FF6B6B;
+}
+
+@keyframes floatUp{
+
+  0%{
+    transform:
+      translateY(100vh)
+      rotate(0deg);
+
+    opacity:0;
+  }
+
+  10%{
+    opacity:1;
+  }
+
+  90%{
+    opacity:.8;
+  }
+
+  100%{
+    transform:
+      translateY(-150px)
+      rotate(360deg);
+
+    opacity:0;
+  }
+}
+.App{
+  position:relative;
+  z-index:1;
+}
+
+.navbar,
+.main-container{
+  position:relative;
+  z-index:2;
 }

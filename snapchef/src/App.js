@@ -743,9 +743,59 @@ function Home() {
 }
 
 function App() {
+  useEffect(() => {
+
+  const container =
+    document.getElementById("floating-elements");
+
+  if (!container) return;
+
+  const items = [
+    "👨‍🍳",
+    "🌿",
+    "✨"
+  ];
+  const create = () => {
+    const el =
+      document.createElement("div");
+    el.className = "float-item";
+    if (Math.random() < 0.5) {
+      el.classList.add("glow-dot");
+    } else {
+      el.innerHTML =
+        items[Math.floor(Math.random() * items.length)];
+      el.style.fontSize =
+        18 + Math.random() * 12 + "px";
+    }
+    el.style.left =
+      Math.random() * 100 + "%";
+    el.style.animationDuration =
+      12 + Math.random() * 8 + "s";
+    container.appendChild(el);
+    setTimeout(() => {
+      el.remove();
+    }, 22000);
+  };
+
+  for(let i=0;i<15;i++){
+    setTimeout(create,i*300);
+  }
+  const interval =
+    setInterval(create,1500);
+  return () => clearInterval(interval);
+}, []);
   return (
     <Router>
       <div className="App pb-5">
+        <div id="blob-layer">
+      <div className="blob blob-1"></div>
+      <div className="blob blob-2"></div>
+      <div className="blob blob-3"></div>
+      <div className="blob blob-4"></div>
+      <div className="blob blob-5"></div>
+    </div>
+
+    <div id="floating-elements"></div>
         <Navbar />
         <Routes>
           <Route path="/sign-in" element={<SignInPage />} />
