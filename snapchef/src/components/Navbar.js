@@ -4,8 +4,17 @@ import { Link } from 'react-router-dom';
 
 export default function Navbar() {
   const { isSignedIn, user } = useUser();
+
+  const [isOpen, setIsOpen] = useState(false);
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return localStorage.getItem('theme') === 'dark';
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme) {
+      return savedTheme === 'dark';
+    }
+
+    return true; // Default Dark Mode
   });
 
   useEffect(() => {
@@ -23,34 +32,77 @@ export default function Navbar() {
   };
 
   return (
-    <nav className={`navbar navbar-expand-lg sticky-top shadow-sm mb-4 ${isDarkMode ? 'navbar-dark-custom' : 'bg-white'}`} style={{ transition: 'all 0.3s ease' }}>
+    <nav
+      className={`navbar sticky-top shadow-sm mb-4 ${
+        isDarkMode ? 'navbar-dark-custom' : 'bg-white'
+      }`}
+    >
       <div className="container">
-        <Link to="/" className="navbar-brand fw-bold text-decoration-none" style={{ color: '#ff6b6b' }}>
-          <span style={{ fontSize: '1.8rem' }}>🍳</span> SnapChef
+
+        <Link
+          to="/"
+          className="navbar-brand fw-bold text-decoration-none"
+        >
+          <span style={{ fontSize: '1.8rem' }}>🍳</span>
+          SnapChef
         </Link>
 
         {isSignedIn && (
-          <div className="navbar-nav me-auto mb-2 mb-lg-0 ms-4">
-            <Link className="nav-link fw-medium" to="/">Scanner</Link>
-            <Link className="nav-link fw-medium" to="/diet-ai">Diet AI</Link>
-            <Link className="nav-link fw-medium" to="/dish-ai">Dish AI</Link>
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            ☰
+          </button>
+        )}
+
+        {isSignedIn && (
+          <div
+            className={`navbar-nav nav-links ms-4 ${
+              isOpen ? 'mobile-open' : ''
+            }`}
+          >
+            <Link
+              className="nav-link fw-medium"
+              to="/"
+              onClick={() => setIsOpen(false)}
+            >
+              Scanner
+            </Link>
+
+            <Link
+              className="nav-link fw-medium"
+              to="/diet-ai"
+              onClick={() => setIsOpen(false)}
+            >
+              Diet AI
+            </Link>
+
+            <Link
+              className="nav-link fw-medium"
+              to="/dish-ai"
+              onClick={() => setIsOpen(false)}
+            >
+              Dish AI
+            </Link>
           </div>
         )}
 
         <div className="d-flex align-items-center ms-auto">
-          <button 
-            className="btn btn-link text-decoration-none me-3 fs-5" 
+
+          <button
+            className="btn btn-link text-decoration-none me-3 fs-5"
             onClick={toggleTheme}
-            style={{ transition: 'all 0.3s ease' }}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {isDarkMode ? '☀️' : '🌙'}
           </button>
+
           {isSignedIn && (
             <>
               <span className="me-3 fw-medium navbar-text-custom">
                 Hello, {user?.firstName || user?.username || 'Chef'}!
               </span>
+
               <UserButton afterSignOutUrl="/sign-in" />
             </>
           )}

@@ -18,13 +18,66 @@ body {
   min-height: 100vh;
 }
 :root {
-  --text-color: #222;
+  --text-color: #ffffff;
+  --card-bg: rgba(255,255,255,.06);
 }
 
-[data-theme="dark"] {
-  --text-color: #fff;
+body.dark-mode {
+  --text-color: #ffffff;
+  --card-bg: rgba(255,255,255,.06);
 }
 
+body:not(.dark-mode) {
+  --text-color: #111827;
+  --card-bg: #ffffff;
+}
+.mobile-menu-btn {
+  display: none;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+
+  .navbar .container {
+    flex-wrap: wrap;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .nav-links {
+    display: none;
+    width: 100%;
+    margin-top: 15px;
+  }
+
+  .nav-links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .navbar-text-custom {
+    display: none;
+  }
+
+  .upload-card {
+    padding: 20px;
+  }
+
+  .preview-image {
+    max-height: 250px;
+  }
+
+  .navbar-brand {
+    font-size: 1.2rem;
+  }
+}
 .personalized-text {
   color: var(--text-color);
 }
@@ -621,4 +674,124 @@ body:not(.dark-mode) .history-item {
 .main-container{
   position:relative;
   z-index:2;
+}
+/* =========================
+   THEME VARIABLES
+========================= */
+
+:root {
+  --text-color: #ffffff;
+  --card-bg: rgba(255,255,255,.06);
+}
+
+body.dark-mode {
+  --text-color: #ffffff;
+  --card-bg: rgba(255,255,255,.06);
+}
+
+body:not(.dark-mode) {
+  --text-color: #111827;
+  --card-bg: #ffffff;
+}
+
+/* =========================
+   GLOBAL TEXT FIX
+========================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+label,
+li {
+  color: var(--text-color);
+}
+
+/* =========================
+   MOBILE NAVBAR
+========================= */
+
+.mobile-menu-btn {
+  display: none;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+
+  .navbar .container {
+    flex-wrap: wrap;
+  }
+
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .nav-links {
+    display: none;
+    width: 100%;
+    margin-top: 15px;
+  }
+
+  .nav-links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .navbar-text-custom {
+    display: none;
+  }
+
+  .upload-card {
+    padding: 20px;
+  }
+
+  .preview-image {
+    max-height: 250px;
+  }
+
+  .navbar-brand {
+    font-size: 1.2rem;
+  }
+}
+
+/* =========================
+   LIGHT THEME FIXES
+========================= */
+
+body:not(.dark-mode) .navbar {
+  background: white !important;
+}
+
+body:not(.dark-mode) .nav-link {
+  color: #111827 !important;
+}
+
+body:not(.dark-mode) .navbar-text-custom {
+  color: #111827 !important;
+}
+
+body:not(.dark-mode) .upload-card,
+body:not(.dark-mode) .recipe-card,
+body:not(.dark-mode) .intelligence-card,
+body:not(.dark-mode) .rec-card-custom {
+  background: white;
+  color: #111827;
+}
+
+body:not(.dark-mode) .upload-card h4,
+body:not(.dark-mode) .upload-card p,
+body:not(.dark-mode) .intelligence-card h1,
+body:not(.dark-mode) .intelligence-card h2,
+body:not(.dark-mode) .intelligence-card h3,
+body:not(.dark-mode) .intelligence-card p {
+  color: #111827 !important;
 }
