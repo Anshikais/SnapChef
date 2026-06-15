@@ -17,6 +17,17 @@ body {
   overflow-x: hidden;
   min-height: 100vh;
 }
+:root {
+  --text-color: #222;
+}
+
+[data-theme="dark"] {
+  --text-color: #fff;
+}
+
+.personalized-text {
+  color: var(--text-color);
+}
 /* Navbar */
 .navbar-brand {
   font-weight: 700;
@@ -27,13 +38,27 @@ body {
   gap: 0.5rem;
 }
 .navbar {
-  background: rgba(255,255,255,.06);
-backdrop-filter: blur(24px);
--webkit-backdrop-filter: blur(24px);
-border:1px solid rgba(255,255,255,.12);
-box-shadow:
-0 8px 32px rgba(0,0,0,.35),
-0 0 60px rgba(75,31,111,.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+  }
+
+  .nav-links {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
 }
 /* Main Container */
 .main-container {

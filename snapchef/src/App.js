@@ -438,7 +438,7 @@ function Home() {
 
       {/* Personal Food Intelligence Center */}
       <div className="mt-5 pt-4 border-top border-secondary">
-        <h2 className="fw-bold mb-4">🧠 Personalized Food Intelligence</h2>
+      <h2 className="personalized-text"> Food Personalized Intelligence</h2>
         
         <div className="d-flex flex-column gap-3">
           
