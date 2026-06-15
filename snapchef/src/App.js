@@ -63,7 +63,7 @@ function Home() {
   const [history, setHistory] = useState([]);
   const [insights, setInsights] = useState(null);
   const [timeSuggestions, setTimeSuggestions] = useState([]);
-  const [isInsightsOpen, setIsInsightsOpen] = useState(false);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(true);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [insightsLoading, setInsightsLoading] = useState(false);
@@ -119,6 +119,7 @@ function Home() {
   useEffect(() => {
     if (user) {
       fetchInsights();
+       setIsInsightsOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -438,7 +439,14 @@ function Home() {
 
       {/* Personal Food Intelligence Center */}
       <div className="mt-5 pt-4 border-top border-secondary">
-      <h2 className="personalized-text"> Food Personalized Intelligence</h2>
+     <h2
+  className="personalized-text fw-bold mb-4"
+  style={{
+    color: "var(--text-color)"
+  }}
+>
+  🤖 Food Personalized Intelligence
+</h2>
         
         <div className="d-flex flex-column gap-3">
           
