@@ -9,7 +9,7 @@ const Groq = require('groq-sdk');
 const axios = require('axios');
 const Recipe = require('./models/Recipe');
 const ScanHistory = require('./models/ScanHistory');
-const Jimp = require('jimp');
+const { Jimp } = require('jimp');
 const FoodMemory = require('./models/FoodMemory');
 
 const app = express();
