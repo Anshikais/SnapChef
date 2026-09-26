@@ -59,7 +59,7 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
 
   try {
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL,
       messages: [{
         role: 'user',
         content: [
@@ -180,7 +180,7 @@ app.post('/api/ai/diet', async (req, res) => {
     if (!dietType) return res.status(400).json({ error: 'Diet type is required' });
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+     model: process.env.GROQ_TEXT_MODEL,
       messages: [{
         role: 'user',
         content: `You are a professional nutritionist and chef. The user's diet type is: ${dietType}.
@@ -220,7 +220,7 @@ app.post('/api/ai/dish', async (req, res) => {
     if (!dishName) return res.status(400).json({ error: 'Dish name is required' });
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+     model: process.env.GROQ_TEXT_MODEL,
       messages: [{
         role: 'user',
         content: `You are an expert chef and culinary assistant. The user wants to make: ${dishName}.
@@ -506,7 +506,7 @@ Return the suggestions as clean bullet points within a raw JSON object matching 
 Do not include any explanation or markdown markup. Return ONLY JSON.`;
 
       const chatResponse = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+       model: process.env.GROQ_TEXT_MODEL,
         messages: [{ role: 'user', content: prompt }]
       });
 
@@ -649,7 +649,7 @@ Return the suggestions in raw JSON format matching this schema:
 Do not include any explanation or markdown formatting. Return ONLY JSON.`;
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL,
       messages: [{ role: 'user', content: prompt }]
     });
 
@@ -735,7 +735,7 @@ Rules:
 - Return ONLY the raw JSON, no explanations, no markdown code blocks.`;
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+    model: process.env.GROQ_TEXT_MODEL,
       messages: [{ role: 'user', content: prompt }]
     });
 
