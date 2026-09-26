@@ -59,7 +59,7 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
 
   try {
     const response = await groq.chat.completions.create({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      model: 'llama-3.3-70b-versatile',
       messages: [{
         role: 'user',
         content: [
@@ -329,7 +329,7 @@ app.post('/api/food/upload', upload.single('image'), async (req, res) => {
 
       // B. Call Groq Vision to identify specific food items
       const visionResponse = await groq.chat.completions.create({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: process.env.GROQ_VISION_MODEL,
         messages: [{
           role: 'user',
           content: [
