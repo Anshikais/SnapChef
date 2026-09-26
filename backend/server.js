@@ -59,7 +59,7 @@ app.post('/scan-image', upload.single('image'), async (req, res) => {
 
   try {
     const response = await groq.chat.completions.create({
-      model: process.env.GROQ_TEXT_MODEL,
+      model: process.env.GROQ_VISION_MODEL,
       messages: [{
         role: 'user',
         content: [
